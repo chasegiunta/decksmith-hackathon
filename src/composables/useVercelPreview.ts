@@ -131,11 +131,15 @@ export function useVercelPreview() {
     status.value = 'idle'
     message.value = 'Preview has not been started.'
     if (!activeSession) return
+    if (keepalive && typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+      const payload = new Blob([JSON.stringify({ session: activeSession })], { type: 'application/json' })
+      if (navigator.sendBeacon('/api/preview/stop', payload)) return
+    }
     await previewRequest('/api/preview/stop', { session: activeSession }, keepalive).catch(() => undefined)
   }
 
   if (typeof window !== 'undefined') {
-    window.addEventListener('pagehide', () => { void stop(true) }, { once: true })
+    window.addEventListener('pagehide', () => { void stop(true) })
   }
 
   return {

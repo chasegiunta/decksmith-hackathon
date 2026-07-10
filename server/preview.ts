@@ -248,5 +248,6 @@ export async function updatePreview(sessionValue: unknown, filesValue: unknown) 
 export async function stopPreview(sessionValue: unknown) {
   const session = verifyPreviewToken(sessionValue)
   const sandbox = await Sandbox.get({ name: session.sandbox })
+  await sandbox.stop().catch(() => undefined)
   await sandbox.delete()
 }
