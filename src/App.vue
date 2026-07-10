@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useDebounceFn, useDropZone, useFileDialog } from '@vueuse/core'
 import { SwitchRoot, SwitchThumb, TabsContent, TabsList, TabsRoot, TabsTrigger } from 'reka-ui'
 import {
   ArrowRight,
   Check,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   CircleAlert,
   CloudUpload,
   Code2,
@@ -14,6 +16,8 @@ import {
   FileText,
   Layers3,
   LoaderCircle,
+  Maximize2,
+  Minimize2,
   Play,
   RefreshCw,
   Sparkles,
@@ -49,6 +53,9 @@ const dropZone = ref<HTMLElement>()
 const isDraggingOver = ref(false)
 const showTerminal = ref(false)
 const hasManualEdits = ref(false)
+const previewFrame = ref<HTMLIFrameElement>()
+const previewShell = ref<HTMLElement>()
+const isPreviewFullscreen = ref(false)
 
 const preview = useVercelPreview()
 const currentStep = computed(() => {
@@ -171,6 +178,28 @@ async function startPreview() {
     // The preview composable exposes a user-facing error and retry state.
   }
 }
+
+function sendPreviewCommand(action: 'previous' | 'next') {
+  const frameWindow = previewFrame.value?.contentWindow
+  if (!frameWindow || !preview.url.value) return
+  frameWindow.postMessage({ type: 'decksmith:navigate', action }, new URL(preview.url.value).origin)
+  previewFrame.value?.focus()
+}
+
+async function togglePreviewFullscreen() {
+  if (document.fullscreenElement) {
+    await document.exitFullscreen()
+    return
+  }
+  await previewShell.value?.requestFullscreen()
+}
+
+function onFullscreenChange() {
+  isPreviewFullscreen.value = document.fullscreenElement === previewShell.value
+}
+
+onMounted(() => document.addEventListener('fullscreenchange', onFullscreenChange))
+onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFullscreenChange))
 
 function downloadMarkdown() {
   downloadBlob(new Blob([markdown.value], { type: 'text/markdown;charset=utf-8' }), `${slugify(config.title)}-slides.md`)
@@ -308,7 +337,18 @@ function resetPdf() {
             <section class="flex min-h-[560px] min-w-0 flex-col overflow-hidden rounded-[22px] border border-[#d9dee6] bg-white shadow-[0_18px_55px_rgba(24,39,75,.12)]">
               <div class="flex h-16 shrink-0 items-center justify-between border-b border-[#e9ecf0] px-5"><div class="flex items-center gap-3"><span class="grid size-9 place-items-center rounded-xl bg-[#eef6ff] text-accent"><Play :size="16" fill="currentColor" /></span><span><strong class="block text-[14px] font-semibold text-[#252a33]">Presentation preview</strong><small class="mt-0.5 block text-[11px] text-[#929aa7]">Click through your slides before sharing</small></span></div><div class="flex items-center gap-2"><button v-if="preview.terminal.value.length" class="grid size-9 cursor-pointer place-items-center rounded-xl border border-[#dfe3e9] bg-white text-[#838b98] transition-transform duration-150 ease-snappy active:scale-[.95]" aria-label="Show troubleshooting details" @click="showTerminal = !showTerminal"><TerminalSquare :size="16" /></button><button class="inline-flex h-9 cursor-pointer items-center gap-2 rounded-xl bg-accent px-3.5 text-[12px] font-semibold text-white shadow-[0_7px_18px_rgba(15,124,255,.22)] transition-transform duration-150 ease-snappy active:scale-[.97] disabled:cursor-not-allowed disabled:opacity-45" :disabled="isPreviewBusy" @click="startPreview"><RefreshCw v-if="preview.status.value === 'ready'" :size="15" /><Play v-else :size="15" />{{ preview.status.value === 'ready' ? 'Refresh preview' : 'Open preview' }}</button></div></div>
               <div class="preview-grid relative min-h-0 flex-1 overflow-hidden p-[clamp(18px,2.5vw,34px)]">
-                <iframe v-if="preview.url.value" class="size-full rounded-2xl border border-[#d9dee6] bg-white shadow-[0_14px_38px_rgba(29,46,79,.16)]" :src="preview.url.value" title="Presentation preview" allow="fullscreen; screen-wake-lock" allowfullscreen></iframe>
+                <div v-if="preview.url.value" ref="previewShell" class="flex size-full min-h-0 flex-col overflow-hidden rounded-2xl border border-[#d9dee6] bg-white shadow-[0_14px_38px_rgba(29,46,79,.16)]">
+                  <iframe ref="previewFrame" class="min-h-0 w-full flex-1 border-0 bg-white" :src="preview.url.value" title="Presentation preview" allow="fullscreen; screen-wake-lock" allowfullscreen></iframe>
+                  <div class="flex h-12 shrink-0 items-center justify-between border-t border-[#e4e8ee] bg-white px-3 text-[#616a77]">
+                    <span class="hidden items-center gap-2 px-2 text-[11px] font-medium sm:inline-flex"><span class="size-1.5 rounded-full bg-[#4db78c]"></span>Live preview</span>
+                    <div class="flex items-center gap-1 rounded-xl bg-[#f2f4f7] p-1">
+                      <button class="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium transition-[transform,background-color,color,box-shadow] duration-150 ease-snappy hover:bg-white hover:text-[#252a33] hover:shadow-sm active:scale-[.96]" type="button" aria-label="Previous slide" @click="sendPreviewCommand('previous')"><ChevronLeft :size="16" />Previous</button>
+                      <span class="h-4 w-px bg-[#d9dee5]" aria-hidden="true"></span>
+                      <button class="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium transition-[transform,background-color,color,box-shadow] duration-150 ease-snappy hover:bg-white hover:text-[#252a33] hover:shadow-sm active:scale-[.96]" type="button" aria-label="Next slide" @click="sendPreviewCommand('next')">Next<ChevronRight :size="16" /></button>
+                    </div>
+                    <button class="inline-flex h-8 cursor-pointer items-center gap-2 rounded-lg px-2.5 text-[12px] font-medium transition-[transform,background-color,color] duration-150 ease-snappy hover:bg-[#f2f4f7] hover:text-[#252a33] active:scale-[.96]" type="button" :aria-label="isPreviewFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'" @click="togglePreviewFullscreen"><Minimize2 v-if="isPreviewFullscreen" :size="16" /><Maximize2 v-else :size="16" /><span class="hidden sm:inline">{{ isPreviewFullscreen ? 'Exit' : 'Full screen' }}</span></button>
+                  </div>
+                </div>
                 <div v-else class="flex size-full min-h-[400px] flex-col items-center justify-center rounded-2xl border border-[#dfe4eb] bg-white/85 text-center backdrop-blur-sm">
                   <div class="preview-illustration relative mb-7 h-[88px] w-[142px] rounded-xl border border-[#d9e0e9] bg-white shadow-[8px_9px_0_-3px_#eef2f7,8px_9px_0_-2px_#dfe5ed]"><div></div><span class="absolute right-4 bottom-4 text-accent"><Play :size="25" fill="currentColor" /></span></div>
                   <h3 class="text-[16px] font-semibold text-[#303640]">{{ isPreviewBusy ? 'Preparing your presentation…' : 'Ready when you are' }}</h3>

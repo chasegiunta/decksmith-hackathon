@@ -13,6 +13,27 @@ const slideStyles = `
 .source-ref { position: absolute; right: 2rem; bottom: 1.4rem; font-size: .58rem; opacity: .48; }
 `.trim()
 
+const previewBridge = `<script setup lang="ts">
+import { onBeforeUnmount, onMounted } from 'vue'
+import { useNav } from '@slidev/client'
+
+const nav = useNav()
+
+function onDecksmithMessage(event: MessageEvent) {
+  if (event.source !== window.parent || !event.data || typeof event.data !== 'object') return
+  const message = event.data as { type?: string; action?: string }
+  if (message.type !== 'decksmith:navigate') return
+  if (message.action === 'previous') void nav.prev()
+  if (message.action === 'next') void nav.next()
+}
+
+onMounted(() => window.addEventListener('message', onDecksmithMessage))
+onBeforeUnmount(() => window.removeEventListener('message', onDecksmithMessage))
+</script>
+
+<template></template>
+`
+
 export function createProjectFiles(
   markdown: string,
   config: DeckConfig,
@@ -34,6 +55,7 @@ export function createProjectFiles(
       },
     }, null, 2),
     'vite.config.ts': `import { defineConfig } from 'vite'\n\nexport default defineConfig({\n  server: { host: '0.0.0.0', allowedHosts: true },\n})\n`,
+    'global-top.vue': previewBridge,
     'styles/index.css': slideStyles,
     'README.md': `# ${config.title || 'Slidev deck'}\n\nGenerated with Decksmith.\n\n## Run locally\n\n\`\`\`bash\nnpm install\nnpm run dev\n\`\`\`\n\nOpen the local URL printed by Slidev. Edit \`slides.md\` to change the deck.\n`,
   }

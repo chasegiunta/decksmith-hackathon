@@ -98,7 +98,7 @@ async function writeProject(
     return
   }
 
-  const liveFiles = files.filter(({ path }) => path === 'slides.md' || path.startsWith('styles/') || path.startsWith('public/'))
+  const liveFiles = files.filter(({ path }) => path === 'slides.md' || path === 'global-top.vue' || path.startsWith('styles/') || path.startsWith('public/'))
   await sandbox.writeFiles(liveFiles)
 }
 
