@@ -9,11 +9,9 @@ import {
   CircleAlert,
   CloudUpload,
   Code2,
-  Eye,
   FileArchive,
   FileDown,
   FileText,
-  KeyRound,
   Layers3,
   LoaderCircle,
   Play,
@@ -23,7 +21,7 @@ import {
   WandSparkles,
   X,
 } from '@lucide/vue'
-import { AnthropicBrowserProvider } from '@/lib/ai'
+import { HostedAiProvider } from '@/lib/ai'
 import { createProjectZip, downloadBlob, slugify } from '@/lib/export'
 import { generateMarkdown, parseOutline, updateMarkdownHeadmatter } from '@/lib/markdown'
 import { createProjectFiles } from '@/lib/project'
@@ -43,8 +41,6 @@ const config = reactive<DeckConfig>({
 const pdf = ref<ExtractedPdf>()
 const deck = ref<GeneratedDeck>()
 const markdown = ref('')
-const apiKey = ref('')
-const showKey = ref(false)
 const status = ref<WorkStatus>('idle')
 const error = ref('')
 const progress = ref({ current: 0, total: 0 })
@@ -136,13 +132,9 @@ async function loadPdf(file: File) {
 async function generateDeck() {
   if (!pdf.value) return
   error.value = ''
-  if (!apiKey.value.trim()) {
-    error.value = 'Add your Claude access key to continue. It stays in this browser tab and is sent directly to Claude.'
-    return
-  }
   status.value = 'generating'
   try {
-    const provider = new AnthropicBrowserProvider(apiKey.value)
+    const provider = new HostedAiProvider()
     deck.value = await provider.generateDeck({ pdf: pdf.value, config })
     if (!config.title.trim()) config.title = deck.value.title
     markdown.value = generateMarkdown(deck.value, config)
@@ -210,7 +202,7 @@ function resetPdf() {
         </a>
 
         <div class="flex items-center gap-2.5">
-          <span v-if="!pdf" class="hidden items-center gap-2 text-[13px] text-white/55 md:inline-flex"><span class="size-1.5 rounded-full bg-[#62d7ad]"></span>Your file stays private</span>
+          <span v-if="!pdf" class="hidden items-center gap-2 text-[13px] text-white/55 md:inline-flex"><span class="size-1.5 rounded-full bg-[#62d7ad]"></span>Your PDF stays in your browser</span>
           <span v-else class="hidden max-w-[260px] items-center gap-2 truncate rounded-full border border-white/12 bg-white/[.07] px-3 py-2 text-[12px] text-white/70 lg:inline-flex"><FileText :size="14" />{{ pdf.fileName }}<button class="grid cursor-pointer place-items-center text-white/50 transition-transform duration-150 ease-snappy active:scale-90 motion-reduce:transition-none" aria-label="Remove PDF" @click="resetPdf"><X :size="14" /></button></span>
           <button v-if="markdown" class="hidden h-10 cursor-pointer items-center gap-2 rounded-xl border border-white/15 bg-white/[.06] px-4 text-[13px] font-medium text-white/80 transition-[transform,background-color] duration-150 ease-snappy hover:bg-white/10 active:scale-[.97] motion-reduce:transition-none sm:inline-flex" @click="downloadMarkdown"><FileDown :size="16" />Download slides</button>
           <button v-if="markdown" class="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-white px-4 text-[13px] font-semibold text-navy shadow-[0_6px_18px_rgba(0,0,0,.16)] transition-transform duration-150 ease-snappy active:scale-[.97] motion-reduce:transition-none" @click="downloadProject"><FileArchive :size="16" />Download presentation</button>
@@ -269,9 +261,8 @@ function resetPdf() {
                 <button class="cursor-pointer rounded-lg p-2 text-[#929aa7] transition-[transform,background-color] duration-150 ease-snappy hover:bg-[#f3f5f8] active:scale-[.94] motion-reduce:transition-none" aria-label="Choose a different PDF" @click="resetPdf"><X :size="18" /></button>
               </div>
 
-              <div class="pt-6"><div class="flex items-start gap-3"><span class="grid size-10 shrink-0 place-items-center rounded-xl bg-[#eef6ff] text-accent"><KeyRound :size="19" /></span><div><h3 class="text-[16px] font-semibold text-[#20242c]">Connect Claude</h3><p class="mt-1 text-[13px] leading-relaxed text-[#7c8491]">Your personal access key lets Claude rewrite this document. It stays in this tab and is never saved by Decksmith.</p></div></div>
-                <label class="mt-5 block text-[12px] font-medium text-[#565e6b]">Claude access key</label>
-                <div class="mt-2 flex h-12 items-center gap-2.5 rounded-xl border border-[#dce1e8] bg-[#fbfcfd] px-3.5 text-[#9aa2ae] focus-within:border-accent focus-within:ring-4 focus-within:ring-[#0f7cff]/8"><KeyRound :size="17" /><input v-model="apiKey" class="h-full w-full border-0 bg-transparent text-[13px] text-[#262b34] outline-0" :type="showKey ? 'text' : 'password'" placeholder="Paste your key here" autocomplete="off" /><button class="cursor-pointer p-1 transition-transform duration-150 ease-snappy active:scale-90 motion-reduce:transition-none" :aria-label="showKey ? 'Hide access key' : 'Show access key'" @click="showKey = !showKey"><Eye :size="17" /></button></div>
+              <div class="pt-6"><div class="flex items-start gap-3"><span class="grid size-10 shrink-0 place-items-center rounded-xl bg-[#eef6ff] text-accent"><Sparkles :size="19" /></span><div><h3 class="text-[16px] font-semibold text-[#20242c]">Ready to work its magic</h3><p class="mt-1 text-[13px] leading-relaxed text-[#7c8491]">Decksmith will find the strongest ideas, group related topics, and create a clear first draft for you.</p></div></div>
+                <div class="mt-5 grid grid-cols-3 gap-3 max-[520px]:grid-cols-1"><div class="rounded-xl bg-[#f6f8fb] p-3"><strong class="block text-[12px] font-medium text-[#3b424d]">Topic-aware</strong><small class="mt-1 block text-[10px] leading-relaxed text-[#929aa7]">Ideas stay together</small></div><div class="rounded-xl bg-[#f6f8fb] p-3"><strong class="block text-[12px] font-medium text-[#3b424d]">Fact faithful</strong><small class="mt-1 block text-[10px] leading-relaxed text-[#929aa7]">Meaning is preserved</small></div><div class="rounded-xl bg-[#f6f8fb] p-3"><strong class="block text-[12px] font-medium text-[#3b424d]">Fully editable</strong><small class="mt-1 block text-[10px] leading-relaxed text-[#929aa7]">You stay in control</small></div></div>
               </div>
             </article>
 

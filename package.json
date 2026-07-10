@@ -24,6 +24,7 @@
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.18",
     "@types/node": "^22.10.2",
+    "@vercel/node": "^5.8.23",
     "@vitejs/plugin-vue": "^6.0.7",
     "@vue/eslint-config-typescript": "^14.6.0",
     "eslint": "^9.39.1",
