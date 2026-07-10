@@ -219,6 +219,17 @@ async function generateDeck() {
   }
 }
 
+async function rewriteDeck() {
+  if (
+    hasManualEdits.value &&
+    !window.confirm(
+      "Rewrite from the original PDF? This will replace your manual content edits.",
+    )
+  )
+    return;
+  await generateDeck();
+}
+
 function onMarkdownInput(event: Event) {
   markdown.value = (event.target as HTMLTextAreaElement).value;
   hasManualEdits.value = true;
@@ -659,51 +670,6 @@ function resetPdf() {
       >
         <div class="mx-auto">
           <div
-            class="mb-5 flex flex-wrap items-end gap-4 rounded-[20px] border border-[#e1e5eb] bg-white p-4 shadow-card"
-          >
-            <label
-              class="grid min-w-[220px] flex-1 gap-1.5 text-[11px] font-medium text-[#69717d]"
-              >Title<input
-                v-model="config.title"
-                class="h-10 rounded-xl border border-[#dfe3e9] bg-[#fbfcfd] px-3 text-[13px] font-normal text-[#252a33]"
-            /></label>
-            <label
-              class="grid min-w-[140px] gap-1.5 text-[11px] font-medium text-[#69717d]"
-              >Voice<span class="relative"
-                ><select
-                  v-model="config.tone"
-                  class="h-10 w-full appearance-none rounded-xl border border-[#dfe3e9] bg-[#fbfcfd] px-3 pr-8 text-[13px] font-normal text-[#252a33]"
-                >
-                  <option value="executive">Professional</option>
-                  <option value="educational">Teaching</option>
-                  <option value="persuasive">Persuasive</option>
-                  <option value="conversational">Friendly</option></select
-                ><ChevronDown
-                  class="pointer-events-none absolute top-3 right-2.5 text-[#9aa2ae]"
-                  :size="14" /></span
-            ></label>
-            <div
-              class="flex h-10 items-center gap-4 rounded-xl bg-[#f3f5f7] px-3"
-            >
-              <label
-                class="flex items-center gap-2 text-[11px] font-medium text-[#69717d]"
-                >Notes<SwitchRoot
-                  v-model="config.includeNotes"
-                  class="relative h-5 w-9 cursor-pointer rounded-full bg-[#cbd1da] p-0.5 transition-colors duration-150 data-[state=checked]:bg-accent"
-                  ><SwitchThumb
-                    class="block size-4 rounded-full bg-white shadow-sm transition-transform duration-150 data-[state=checked]:translate-x-4" /></SwitchRoot></label
-              ><label
-                class="flex items-center gap-2 text-[11px] font-medium text-[#69717d]"
-                >References<SwitchRoot
-                  v-model="config.preserveSourceReferences"
-                  class="relative h-5 w-9 cursor-pointer rounded-full bg-[#cbd1da] p-0.5 transition-colors duration-150 data-[state=checked]:bg-accent"
-                  ><SwitchThumb
-                    class="block size-4 rounded-full bg-white shadow-sm transition-transform duration-150 data-[state=checked]:translate-x-4" /></SwitchRoot
-              ></label>
-            </div>
-          </div>
-
-          <div
             class="grid min-h-[650px] grid-cols-[minmax(340px,.82fr)_minmax(440px,1.18fr)_320px] gap-5 max-[1240px]:grid-cols-2 max-[860px]:grid-cols-1"
           >
             <section
@@ -759,6 +725,52 @@ function resetPdf() {
                     }}</strong
                     ><ArrowRight class="text-[#a1a8b3]" :size="15" /></button
                 ></TabsContent>
+                <footer
+                  class="shrink-0 border-t border-[#e9ecf0] bg-[#fbfcfd] p-3.5"
+                >
+                  <div
+                    v-if="error"
+                    class="mb-3 flex items-start gap-2 rounded-xl border border-[#f0c9ce] bg-[#fff6f7] px-3 py-2.5 text-[11px] leading-relaxed text-[#a94b57]"
+                  >
+                    <CircleAlert class="mt-0.5 shrink-0" :size="14" />{{ error }}
+                  </div>
+                  <div class="flex flex-wrap items-end justify-between gap-3">
+                    <label
+                      class="grid min-w-[145px] flex-1 gap-1.5 text-[11px] font-medium text-[#69717d]"
+                      >Voice<span class="relative"
+                        ><select
+                          v-model="config.tone"
+                          class="h-10 w-full appearance-none rounded-xl border border-[#dfe3e9] bg-white px-3 pr-8 text-[12px] font-normal text-[#252a33]"
+                        >
+                          <option value="executive">Professional</option>
+                          <option value="educational">Teaching</option>
+                          <option value="persuasive">Persuasive</option>
+                          <option value="conversational">Friendly</option></select
+                        ><ChevronDown
+                          class="pointer-events-none absolute top-3 right-2.5 text-[#9aa2ae]"
+                          :size="14" /></span
+                    ></label>
+                    <div class="ml-auto text-right">
+                      <small class="mb-1.5 block text-[10px] text-[#929aa7]"
+                        >Rewrites from the original PDF</small
+                      >
+                      <button
+                        class="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-accent px-4 text-[12px] font-semibold text-white shadow-[0_7px_18px_rgba(15,124,255,.22)] transition-transform duration-150 ease-snappy active:scale-[.97] disabled:cursor-not-allowed disabled:opacity-50"
+                        type="button"
+                        :disabled="status === 'generating'"
+                        @click="rewriteDeck"
+                      >
+                        <LoaderCircle
+                          v-if="status === 'generating'"
+                          class="animate-spin motion-reduce:animate-none"
+                          :size="15"
+                        /><WandSparkles v-else :size="15" />{{
+                          status === "generating" ? "Rewriting…" : "Rewrite"
+                        }}
+                      </button>
+                    </div>
+                  </div>
+                </footer>
               </TabsRoot>
             </section>
 
