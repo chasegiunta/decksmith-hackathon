@@ -53,21 +53,22 @@ const dropZone = ref<HTMLElement>()
 const isDraggingOver = ref(false)
 const showTerminal = ref(false)
 const hasManualEdits = ref(false)
+const hasDownloaded = ref(false)
 const previewFrame = ref<HTMLIFrameElement>()
 const previewShell = ref<HTMLElement>()
 const isPreviewFullscreen = ref(false)
 
 const preview = useVercelPreview()
 const currentStep = computed(() => {
-  if (!pdf.value) return 1
-  if (!markdown.value) return 2
-  return preview.status.value === 'ready' ? 4 : 3
+  if (!markdown.value) return 1
+  if (hasDownloaded.value) return 4
+  return preview.status.value === 'ready' ? 3 : 2
 })
 const journeySteps = [
-  { number: 1, label: 'Upload', description: 'Choose your PDF' },
-  { number: 2, label: 'Rewrite', description: 'Shape the story' },
-  { number: 3, label: 'Edit', description: 'Make it yours' },
-  { number: 4, label: 'Share', description: 'Preview & download' },
+  { number: 1, label: 'Upload', description: 'Source & style' },
+  { number: 2, label: 'Edit', description: 'Review your draft' },
+  { number: 3, label: 'Preview', description: 'See it live' },
+  { number: 4, label: 'Share', description: 'Download files' },
 ]
 const outline = computed(() => markdown.value ? parseOutline(markdown.value) : [])
 const assets = computed<Record<string, Uint8Array>>(() => {
@@ -146,6 +147,7 @@ async function generateDeck() {
     if (!config.title.trim()) config.title = deck.value.title
     markdown.value = generateMarkdown(deck.value, config)
     hasManualEdits.value = false
+    hasDownloaded.value = false
     status.value = 'generated'
   } catch (cause) {
     status.value = 'error'
@@ -202,11 +204,13 @@ onMounted(() => document.addEventListener('fullscreenchange', onFullscreenChange
 onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFullscreenChange))
 
 function downloadMarkdown() {
+  hasDownloaded.value = true
   downloadBlob(new Blob([markdown.value], { type: 'text/markdown;charset=utf-8' }), `${slugify(config.title)}-slides.md`)
 }
 
 async function downloadProject() {
   const zip = await createProjectZip(projectFiles.value)
+  hasDownloaded.value = true
   downloadBlob(zip, `${slugify(config.title)}-slidev.zip`)
 }
 
@@ -217,6 +221,7 @@ function resetPdf() {
   markdown.value = ''
   status.value = 'idle'
   error.value = ''
+  hasDownloaded.value = false
   config.title = ''
 }
 </script>
@@ -254,14 +259,14 @@ function resetPdf() {
     </nav>
 
     <main class="h-[calc(100vh-160px)] overflow-auto bg-canvas max-[720px]:h-auto max-[720px]:min-h-[calc(100vh-160px)]">
-      <section v-if="!pdf" class="upload-gradient flex min-h-full flex-col items-center justify-center px-6 py-12 text-center text-white">
+      <section v-if="!markdown" class="upload-gradient flex min-h-full flex-col items-center px-6 py-12 text-center text-white max-[720px]:px-4">
         <div class="max-w-[840px]">
           <div class="mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[.07] px-4 py-2 text-[11px] font-semibold tracking-[0.12em] text-white/75 uppercase backdrop-blur-xl"><Sparkles :size="15" />From document to deck, in minutes</div>
           <h1 class="text-[clamp(42px,5.5vw,72px)] leading-[1.02] font-normal tracking-[-0.052em] text-white">Your document has a story.<br /><span class="text-[#a9d8ff]">Bring it to life.</span></h1>
           <p class="mx-auto mt-5 max-w-[680px] text-[17px] leading-[1.65] text-white/65">Upload a report, proposal, or guide. Decksmith finds the narrative and turns it into a presentation you can shape and share.</p>
         </div>
 
-        <button ref="dropZone" type="button" class="mt-9 flex min-h-[215px] w-full max-w-[650px] cursor-pointer flex-col items-center justify-center rounded-[26px] border border-white/70 bg-white px-8 text-[#151a24] shadow-[0_24px_70px_rgba(2,21,61,.28),0_2px_8px_rgba(2,21,61,.12)] transition-transform duration-150 ease-snappy hover:-translate-y-0.5 active:scale-[.99] motion-reduce:transform-none motion-reduce:transition-none" :class="{ '-translate-y-1 ring-4 ring-white/25': isDraggingOver }" @click="openFileDialog()">
+        <button v-if="!pdf" ref="dropZone" type="button" class="mt-9 flex min-h-[215px] w-full max-w-[650px] cursor-pointer flex-col items-center justify-center rounded-[26px] border border-white/70 bg-white px-8 text-[#151a24] shadow-[0_24px_70px_rgba(2,21,61,.28),0_2px_8px_rgba(2,21,61,.12)] transition-transform duration-150 ease-snappy hover:-translate-y-0.5 active:scale-[.99] motion-reduce:transform-none motion-reduce:transition-none" :class="{ '-translate-y-1 ring-4 ring-white/25': isDraggingOver }" @click="openFileDialog()">
           <span class="mb-4 grid size-14 place-items-center rounded-2xl bg-[#eef6ff] text-accent"><CloudUpload :size="28" :stroke-width="1.8" /></span>
           <strong class="text-[17px] font-semibold tracking-[-0.01em]">Drop your PDF here</strong>
           <span class="mt-1.5 text-[14px] text-[#808897]">or choose a file from your computer</span>
@@ -269,50 +274,35 @@ function resetPdf() {
           <small class="mt-3 text-[11px] text-[#a0a7b2]">Up to 25 MB · 80 pages</small>
         </button>
 
-        <div v-if="status === 'extracting'" class="mt-5 flex items-center gap-2 text-[13px] text-white/75"><LoaderCircle class="animate-spin motion-reduce:animate-none" :size="18" />Reading page {{ progress.current }} of {{ progress.total || '…' }}</div>
-        <div v-if="error" class="mt-5 flex max-w-[650px] items-center gap-2.5 rounded-xl border border-white/15 bg-[#5e1631]/55 px-4 py-3 text-left text-[13px] leading-relaxed text-white/85 backdrop-blur-xl"><CircleAlert :size="18" />{{ error }}</div>
+        <article v-else class="mt-9 flex w-full max-w-[650px] items-center gap-4 rounded-[22px] border border-white/70 bg-white p-4 text-left text-[#20242c] shadow-[0_24px_70px_rgba(2,21,61,.24),0_2px_8px_rgba(2,21,61,.10)]">
+          <div class="grid h-[76px] w-[60px] shrink-0 place-items-center overflow-hidden rounded-xl border border-[#e4e8ee] bg-[#f0f3f7] text-[#87909e]"><img v-if="coverDataUrl" class="size-full object-cover" :src="coverDataUrl" alt="PDF first page preview" /><FileText v-else :size="27" /></div>
+          <div class="min-w-0 flex-1"><span class="inline-flex items-center gap-1.5 rounded-full bg-[#ecf8f2] px-2.5 py-1 text-[10px] font-semibold text-[#24845f]"><Check :size="12" />PDF ready</span><h2 class="mt-2 truncate text-[15px] font-semibold">{{ pdf.fileName }}</h2><p class="mt-1 text-[11px] text-[#89919e]">{{ pdf.pageCount }} pages · {{ pdf.pages.reduce((sum, page) => sum + page.characterCount, 0).toLocaleString() }} characters found</p></div>
+          <button class="inline-flex h-9 cursor-pointer items-center gap-2 rounded-xl border border-[#dfe3e9] px-3 text-[12px] font-medium text-[#707986] transition-[transform,background-color] duration-150 ease-snappy hover:bg-[#f4f6f8] active:scale-[.96]" type="button" @click="openFileDialog()"><RefreshCw :size="14" />Change</button>
+        </article>
 
-        <div class="mt-10 grid w-full max-w-[900px] grid-cols-3 border-t border-white/12 pt-7 text-left max-[720px]:grid-cols-1 max-[720px]:gap-4">
+        <div v-if="status === 'extracting'" class="mt-5 flex items-center gap-2 text-[13px] text-white/75"><LoaderCircle class="animate-spin motion-reduce:animate-none" :size="18" />Reading page {{ progress.current }} of {{ progress.total || '…' }}</div>
+
+        <article class="mt-7 w-full max-w-[900px] rounded-[26px] border border-white/70 bg-white p-6 text-left text-[#20242c] shadow-[0_24px_70px_rgba(2,21,61,.22),0_2px_8px_rgba(2,21,61,.10)] max-[620px]:p-5">
+          <div class="mb-6 flex items-start gap-3 border-b border-[#edf0f4] pb-5"><span class="grid size-10 shrink-0 place-items-center rounded-xl bg-[#eef6ff] text-accent"><Sparkles :size="19" /></span><div><h2 class="text-[18px] font-semibold tracking-[-0.02em]">Make it yours</h2><p class="mt-1 text-[13px] text-[#858d99]">Choose the style of your first draft before Decksmith starts writing.</p></div></div>
+          <div class="grid grid-cols-2 gap-x-5 gap-y-5 max-[620px]:grid-cols-1">
+            <div class="col-span-2 max-[620px]:col-span-1">
+              <label class="grid gap-2 text-[12px] font-medium text-[#5d6572]">Presentation title<input v-model="config.title" class="h-11 w-full rounded-xl border border-[#dce1e8] bg-[#fbfcfd] px-3.5 text-[13px] font-normal text-[#262b34]" placeholder="Untitled presentation" /></label>
+            </div>
+            <label class="grid gap-2 text-[12px] font-medium text-[#5d6572]">Look<span class="relative"><select v-model="config.theme" class="h-11 w-full appearance-none rounded-xl border border-[#dce1e8] bg-[#fbfcfd] px-3.5 pr-9 text-[13px] font-normal text-[#262b34]"><option value="seriph">Editorial</option><option value="default">Clean</option><option value="apple-basic">Minimal</option></select><ChevronDown class="pointer-events-none absolute top-3.5 right-3 text-[#9aa2ae]" :size="15" /></span></label>
+            <label class="grid gap-2 text-[12px] font-medium text-[#5d6572]">Voice<span class="relative"><select v-model="config.tone" class="h-11 w-full appearance-none rounded-xl border border-[#dce1e8] bg-[#fbfcfd] px-3.5 pr-9 text-[13px] font-normal text-[#262b34]"><option value="executive">Professional</option><option value="educational">Teaching</option><option value="persuasive">Persuasive</option><option value="conversational">Friendly</option></select><ChevronDown class="pointer-events-none absolute top-3.5 right-3 text-[#9aa2ae]" :size="15" /></span></label>
+            <div class="col-span-2 max-[620px]:col-span-1"><span class="text-[12px] font-medium text-[#5d6572]">Amount of detail</span><div class="mt-2 grid grid-cols-3 rounded-xl bg-[#f1f3f6] p-1"><button v-for="option in [{ value: 'airy', label: 'Simple' }, { value: 'balanced', label: 'Balanced' }, { value: 'dense', label: 'Detailed' }]" :key="option.value" class="cursor-pointer rounded-lg px-2 py-2.5 text-[12px] font-medium text-[#7a8290] transition-[transform,background-color,color,box-shadow] duration-150 ease-snappy active:scale-[.97] motion-reduce:transition-none" :class="{ 'bg-white text-[#252a33] shadow-sm': config.density === option.value }" @click="config.density = option.value as DeckConfig['density']">{{ option.label }}</button></div></div>
+            <div class="flex items-center justify-between gap-4 rounded-xl border border-[#e6e9ee] px-4 py-3"><span><strong class="block text-[13px] font-medium text-[#343a44]">Presenter notes</strong><small class="mt-0.5 block text-[11px] text-[#929aa7]">Add helpful talking points</small></span><SwitchRoot v-model="config.includeNotes" class="relative h-[22px] w-[38px] cursor-pointer rounded-full bg-[#ccd2db] p-[3px] transition-colors duration-150 ease-snappy data-[state=checked]:bg-accent motion-reduce:transition-none"><SwitchThumb class="block size-4 rounded-full bg-white shadow-sm transition-transform duration-150 ease-snappy data-[state=checked]:translate-x-4 motion-reduce:transition-none" /></SwitchRoot></div>
+            <div class="flex items-center justify-between gap-4 rounded-xl border border-[#e6e9ee] px-4 py-3"><span><strong class="block text-[13px] font-medium text-[#343a44]">Page references</strong><small class="mt-0.5 block text-[11px] text-[#929aa7]">Show where ideas came from</small></span><SwitchRoot v-model="config.preserveSourceReferences" class="relative h-[22px] w-[38px] cursor-pointer rounded-full bg-[#ccd2db] p-[3px] transition-colors duration-150 ease-snappy data-[state=checked]:bg-accent motion-reduce:transition-none"><SwitchThumb class="block size-4 rounded-full bg-white shadow-sm transition-transform duration-150 ease-snappy data-[state=checked]:translate-x-4 motion-reduce:transition-none" /></SwitchRoot></div>
+          </div>
+
+          <div v-if="error" class="mt-5 flex items-start gap-2.5 rounded-xl border border-[#f0c9ce] bg-[#fff6f7] px-3.5 py-3 text-[12px] leading-relaxed text-[#a94b57]"><CircleAlert class="mt-0.5 shrink-0" :size="16" />{{ error }}</div>
+          <button class="mt-6 flex h-12 w-full cursor-pointer items-center justify-center gap-2.5 rounded-xl bg-accent px-5 text-[14px] font-semibold text-white shadow-[0_10px_24px_rgba(15,124,255,.24)] transition-transform duration-150 ease-snappy active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-45 motion-reduce:transition-none" :disabled="!canGenerate" @click="generateDeck"><LoaderCircle v-if="status === 'generating'" class="animate-spin motion-reduce:animate-none" :size="19" /><WandSparkles v-else :size="19" />{{ status === 'generating' ? 'Creating your presentation…' : pdf ? 'Create my presentation' : 'Upload a PDF to continue' }}<ArrowRight v-if="status !== 'generating' && pdf" class="ml-auto" :size="18" /></button>
+        </article>
+
+        <div class="mt-9 grid w-full max-w-[900px] grid-cols-3 border-t border-white/12 pt-7 text-left max-[720px]:grid-cols-1 max-[720px]:gap-4">
           <div class="flex items-center justify-center gap-3"><span class="grid size-10 place-items-center rounded-xl bg-white/[.08] text-[#b9ddff]"><FileText :size="19" /></span><span><strong class="block text-[13px] font-medium text-white/85">Works with real documents</strong><small class="mt-1 block text-[11px] text-white/45">Reports, proposals, guides, and more</small></span></div>
           <div class="flex items-center justify-center gap-3"><span class="grid size-10 place-items-center rounded-xl bg-white/[.08] text-[#b9ddff]"><WandSparkles :size="19" /></span><span><strong class="block text-[13px] font-medium text-white/85">Organized by ideas</strong><small class="mt-1 block text-[11px] text-white/45">Not one slide per page</small></span></div>
           <div class="flex items-center justify-center gap-3"><span class="grid size-10 place-items-center rounded-xl bg-white/[.08] text-[#b9ddff]"><Layers3 :size="19" /></span><span><strong class="block text-[13px] font-medium text-white/85">Everything stays editable</strong><small class="mt-1 block text-[11px] text-white/45">Change the words, style, and structure</small></span></div>
-        </div>
-      </section>
-
-      <section v-else-if="!markdown" class="min-h-full bg-[#f6f7f9] px-6 py-12 max-[720px]:px-4 max-[720px]:py-8">
-        <div class="mx-auto max-w-[1180px]">
-          <div class="mb-8 max-w-[680px]"><span class="text-[12px] font-semibold tracking-[0.11em] text-accent uppercase">Step 2 · Rewrite</span><h1 class="mt-3 text-[clamp(34px,4vw,52px)] leading-[1.06] font-normal tracking-[-0.045em] text-[#171a21]">Let’s shape your presentation.</h1><p class="mt-4 text-[16px] leading-relaxed text-[#737b88]">Choose how it should feel, then let Decksmith turn your source into a clear story.</p></div>
-
-          <div class="grid grid-cols-[1.12fr_.88fr] gap-6 max-[900px]:grid-cols-1">
-            <article class="rounded-[24px] border border-[#e1e5eb] bg-white p-6 shadow-card">
-              <div class="flex items-start gap-4 border-b border-[#edf0f4] pb-6">
-                <div class="grid h-[86px] w-[70px] shrink-0 place-items-center overflow-hidden rounded-xl border border-[#e4e8ee] bg-[#f0f3f7] text-[#87909e]"><img v-if="coverDataUrl" class="size-full object-cover" :src="coverDataUrl" alt="PDF first page preview" /><FileText v-else :size="30" /></div>
-                <div class="min-w-0 flex-1"><span class="inline-flex items-center gap-1.5 rounded-full bg-[#ecf8f2] px-2.5 py-1 text-[10px] font-semibold text-[#24845f]"><Check :size="12" />Ready</span><h2 class="mt-2 truncate text-[16px] font-semibold text-[#20242c]">{{ pdf.fileName }}</h2><p class="mt-1 text-[12px] text-[#89919e]">{{ pdf.pageCount }} pages · {{ pdf.pages.reduce((sum, page) => sum + page.characterCount, 0).toLocaleString() }} characters found</p></div>
-                <button class="cursor-pointer rounded-lg p-2 text-[#929aa7] transition-[transform,background-color] duration-150 ease-snappy hover:bg-[#f3f5f8] active:scale-[.94] motion-reduce:transition-none" aria-label="Choose a different PDF" @click="resetPdf"><X :size="18" /></button>
-              </div>
-
-              <div class="pt-6"><div class="flex items-start gap-3"><span class="grid size-10 shrink-0 place-items-center rounded-xl bg-[#eef6ff] text-accent"><Sparkles :size="19" /></span><div><h3 class="text-[16px] font-semibold text-[#20242c]">Ready to work its magic</h3><p class="mt-1 text-[13px] leading-relaxed text-[#7c8491]">Decksmith will find the strongest ideas, group related topics, and create a clear first draft for you.</p></div></div>
-                <div class="mt-5 grid grid-cols-3 gap-3 max-[520px]:grid-cols-1"><div class="rounded-xl bg-[#f6f8fb] p-3"><strong class="block text-[12px] font-medium text-[#3b424d]">Topic-aware</strong><small class="mt-1 block text-[10px] leading-relaxed text-[#929aa7]">Ideas stay together</small></div><div class="rounded-xl bg-[#f6f8fb] p-3"><strong class="block text-[12px] font-medium text-[#3b424d]">Fact faithful</strong><small class="mt-1 block text-[10px] leading-relaxed text-[#929aa7]">Meaning is preserved</small></div><div class="rounded-xl bg-[#f6f8fb] p-3"><strong class="block text-[12px] font-medium text-[#3b424d]">Fully editable</strong><small class="mt-1 block text-[10px] leading-relaxed text-[#929aa7]">You stay in control</small></div></div>
-              </div>
-            </article>
-
-            <article class="rounded-[24px] border border-[#e1e5eb] bg-white p-6 shadow-card">
-              <div class="mb-6"><h2 class="text-[18px] font-semibold tracking-[-0.02em] text-[#20242c]">Make it yours</h2><p class="mt-1 text-[13px] text-[#858d99]">A few choices help us get the first draft right.</p></div>
-              <div class="grid gap-5">
-                <label class="grid gap-2 text-[12px] font-medium text-[#5d6572]">Presentation title<input v-model="config.title" class="h-11 w-full rounded-xl border border-[#dce1e8] bg-[#fbfcfd] px-3.5 text-[13px] font-normal text-[#262b34]" placeholder="Untitled presentation" /></label>
-                <div class="grid grid-cols-2 gap-4 max-[480px]:grid-cols-1">
-                  <label class="grid gap-2 text-[12px] font-medium text-[#5d6572]">Look<span class="relative"><select v-model="config.theme" class="h-11 w-full appearance-none rounded-xl border border-[#dce1e8] bg-[#fbfcfd] px-3.5 pr-9 text-[13px] font-normal text-[#262b34]"><option value="seriph">Editorial</option><option value="default">Clean</option><option value="apple-basic">Minimal</option></select><ChevronDown class="pointer-events-none absolute top-3.5 right-3 text-[#9aa2ae]" :size="15" /></span></label>
-                  <label class="grid gap-2 text-[12px] font-medium text-[#5d6572]">Voice<span class="relative"><select v-model="config.tone" class="h-11 w-full appearance-none rounded-xl border border-[#dce1e8] bg-[#fbfcfd] px-3.5 pr-9 text-[13px] font-normal text-[#262b34]"><option value="executive">Professional</option><option value="educational">Teaching</option><option value="persuasive">Persuasive</option><option value="conversational">Friendly</option></select><ChevronDown class="pointer-events-none absolute top-3.5 right-3 text-[#9aa2ae]" :size="15" /></span></label>
-                </div>
-                <div><span class="text-[12px] font-medium text-[#5d6572]">Amount of detail</span><div class="mt-2 grid grid-cols-3 rounded-xl bg-[#f1f3f6] p-1"><button v-for="option in [{ value: 'airy', label: 'Simple' }, { value: 'balanced', label: 'Balanced' }, { value: 'dense', label: 'Detailed' }]" :key="option.value" class="cursor-pointer rounded-lg px-2 py-2.5 text-[12px] font-medium text-[#7a8290] transition-[transform,background-color,color,box-shadow] duration-150 ease-snappy active:scale-[.97] motion-reduce:transition-none" :class="{ 'bg-white text-[#252a33] shadow-sm': config.density === option.value }" @click="config.density = option.value as DeckConfig['density']">{{ option.label }}</button></div></div>
-                <div class="flex items-center justify-between gap-4 border-t border-[#edf0f4] pt-4"><span><strong class="block text-[13px] font-medium text-[#343a44]">Presenter notes</strong><small class="mt-0.5 block text-[11px] text-[#929aa7]">Add helpful talking points</small></span><SwitchRoot v-model="config.includeNotes" class="relative h-[22px] w-[38px] cursor-pointer rounded-full bg-[#ccd2db] p-[3px] transition-colors duration-150 ease-snappy data-[state=checked]:bg-accent motion-reduce:transition-none"><SwitchThumb class="block size-4 rounded-full bg-white shadow-sm transition-transform duration-150 ease-snappy data-[state=checked]:translate-x-4 motion-reduce:transition-none" /></SwitchRoot></div>
-                <div class="flex items-center justify-between gap-4"><span><strong class="block text-[13px] font-medium text-[#343a44]">Page references</strong><small class="mt-0.5 block text-[11px] text-[#929aa7]">Show where ideas came from</small></span><SwitchRoot v-model="config.preserveSourceReferences" class="relative h-[22px] w-[38px] cursor-pointer rounded-full bg-[#ccd2db] p-[3px] transition-colors duration-150 ease-snappy data-[state=checked]:bg-accent motion-reduce:transition-none"><SwitchThumb class="block size-4 rounded-full bg-white shadow-sm transition-transform duration-150 ease-snappy data-[state=checked]:translate-x-4 motion-reduce:transition-none" /></SwitchRoot></div>
-              </div>
-
-              <div v-if="error" class="mt-5 flex items-start gap-2.5 rounded-xl border border-[#f0c9ce] bg-[#fff6f7] px-3.5 py-3 text-[12px] leading-relaxed text-[#a94b57]"><CircleAlert class="mt-0.5 shrink-0" :size="16" />{{ error }}</div>
-              <button class="mt-6 flex h-12 w-full cursor-pointer items-center justify-center gap-2.5 rounded-xl bg-accent px-5 text-[14px] font-semibold text-white shadow-[0_10px_24px_rgba(15,124,255,.24)] transition-transform duration-150 ease-snappy active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-45 motion-reduce:transition-none" :disabled="!canGenerate" @click="generateDeck"><LoaderCircle v-if="status === 'generating'" class="animate-spin motion-reduce:animate-none" :size="19" /><WandSparkles v-else :size="19" />{{ status === 'generating' ? 'Creating your presentation…' : 'Create my presentation' }}<ArrowRight v-if="status !== 'generating'" class="ml-auto" :size="18" /></button>
-            </article>
-          </div>
         </div>
       </section>
 
