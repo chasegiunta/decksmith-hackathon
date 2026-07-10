@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useCallback, useRef, useState } from 'react'
 import { loadPdfPages, type PdfPage } from '@/lib/pdf'
 import { englishVoiceOptions, pickDefaultVoice, useSpeechVoices } from '@/lib/voices'
@@ -73,7 +74,12 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 px-6 py-10">
       <div className="mx-auto max-w-4xl">
-        <h1 className="text-3xl font-semibold tracking-tight">Slide Deck Mode</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-semibold tracking-tight">Slide Deck Mode</h1>
+          <Link href="/forms" className="text-sm text-slate-400 hover:text-slate-200">
+            Form → PDF →
+          </Link>
+        </div>
         <p className="mt-2 text-slate-400">
           Upload a PDF and it becomes a narrated slideshow — AI writes the script, your browser speaks it.
         </p>
