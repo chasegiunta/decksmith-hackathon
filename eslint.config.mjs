@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Vendored, minified pdfjs worker copied into public/ for client-side PDF rendering.
+    "public/**",
   ]),
 ]);
 

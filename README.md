@@ -1,36 +1,38 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Slide Deck Mode
 
-## Getting Started
+Upload a PDF → it becomes a narrated slideshow. Claude writes a short spoken script per page,
+your browser reads it out loud during "Present" mode.
 
-First, run the development server:
+## How it works
+
+1. The PDF is rendered entirely client-side with `pdfjs-dist` — each page becomes a canvas image,
+   and its text is extracted for narration input. No PDF ever touches the server.
+2. The extracted text for every page is sent once to `/api/narrate`, which asks Claude for a short,
+   conversational narration script per page and returns them as JSON.
+3. "Present" mode shows each page full-screen and speaks its script using the browser's built-in
+   `speechSynthesis` API (zero cost, zero extra API key), auto-advancing to the next slide when
+   narration finishes.
+
+## Setup
 
 ```bash
+nvm use   # or: nvm install (uses .nvmrc, Node 20+)
+npm install
+cp .env.local.example .env.local   # then fill in ANTHROPIC_API_KEY
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000, upload a PDF, wait for narration to generate, hit Present.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deploying (for a public URL)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Easiest path: push this repo to GitHub, then import it at https://vercel.com/new — it auto-detects
+Next.js. Add `ANTHROPIC_API_KEY` under Project Settings → Environment Variables before your first
+deploy (or redeploy after adding it).
 
-## Learn More
+## Stretch ideas (if there's time left)
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Swap browser TTS for a nicer voice (OpenAI TTS / ElevenLabs) via a `/api/tts` route.
+- Auto-advance through the whole deck instead of one slide at a time.
+- Let the user edit/regenerate a slide's script before presenting.
+- Export the narrated deck as a video (canvas + audio track).
