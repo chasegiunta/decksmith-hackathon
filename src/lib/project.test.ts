@@ -1,7 +1,7 @@
 import JSZip from 'jszip'
 import { describe, expect, it } from 'vitest'
 import { createProjectZip } from '@/lib/export'
-import { createProjectFiles, toWebContainerTree } from '@/lib/project'
+import { createProjectFiles } from '@/lib/project'
 import type { DeckConfig } from '@/types/deck'
 
 const config: DeckConfig = {
@@ -14,7 +14,7 @@ const config: DeckConfig = {
 }
 
 describe('Slidev project generation', () => {
-  it('creates a complete runnable project and nested WebContainer tree', () => {
+  it('creates a complete runnable Slidev project', () => {
     const files = createProjectFiles('# Hello', config, { 'cover.png': new Uint8Array([1, 2, 3]) })
     expect(files).toHaveProperty('slides.md')
     expect(files).toHaveProperty('package.json')
@@ -22,7 +22,7 @@ describe('Slidev project generation', () => {
     expect(files).toHaveProperty('styles/index.css')
     expect(files).toHaveProperty('README.md')
     expect(files).toHaveProperty('public/assets/cover.png')
-    expect(toWebContainerTree(files)).toHaveProperty(['styles', 'directory', 'index.css', 'file', 'contents'])
+    expect(files['vite.config.ts']).toContain('allowedHosts: true')
   })
 
   it('exports every project file into a readable zip', async () => {

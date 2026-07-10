@@ -3,16 +3,28 @@ import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 import generateHandler from './api/generate'
+import previewStartHandler from './api/preview/start'
+import previewStopHandler from './api/preview/stop'
+import previewUpdateHandler from './api/preview/update'
 
-function localGenerateApi(environment: Record<string, string>): Plugin {
-  for (const name of ['LITELLM_API_KEY', 'LITELLM_BASE_URL', 'LITELLM_MODEL']) {
-    if (environment[name]) process.env[name] = environment[name]
+type ApiHandler = (request: never, response: never) => Promise<unknown>
+
+function localServerApi(environment: Record<string, string>): Plugin {
+  for (const [name, value] of Object.entries(environment)) {
+    if (/^(LITELLM_|PREVIEW_|VERCEL_)/.test(name) && value) process.env[name] = value
   }
 
+  const routes: Array<[string, ApiHandler]> = [
+    ['/api/generate', generateHandler],
+    ['/api/preview/start', previewStartHandler],
+    ['/api/preview/update', previewUpdateHandler],
+    ['/api/preview/stop', previewStopHandler],
+  ]
+
   return {
-    name: 'local-generate-api',
+    name: 'local-server-api',
     configureServer(server) {
-      server.middlewares.use('/api/generate', async (request, response, next) => {
+      for (const [path, handler] of routes) server.middlewares.use(path, async (request, response, next) => {
         if (request.url !== '/' || !request.method) return next()
 
         const chunks: Buffer[] = []
@@ -36,27 +48,15 @@ function localGenerateApi(environment: Record<string, string>): Plugin {
           },
         })
 
-        await generateHandler(localRequest as never, localResponse as never)
+        await handler(localRequest as never, localResponse as never)
       })
     },
   }
 }
 
 export default defineConfig(({ mode }) => ({
-  plugins: [vue(), tailwindcss(), localGenerateApi(loadEnv(mode, process.cwd(), ''))],
+  plugins: [vue(), tailwindcss(), localServerApi(loadEnv(mode, process.cwd(), ''))],
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
-  },
-  server: {
-    headers: {
-      'Cross-Origin-Embedder-Policy': 'credentialless',
-      'Cross-Origin-Opener-Policy': 'same-origin',
-    },
-  },
-  preview: {
-    headers: {
-      'Cross-Origin-Embedder-Policy': 'credentialless',
-      'Cross-Origin-Opener-Policy': 'same-origin',
-    },
   },
 }))

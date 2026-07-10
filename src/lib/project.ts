@@ -33,7 +33,7 @@ export function createProjectFiles(
         vue: '^3.5.39',
       },
     }, null, 2),
-    'vite.config.ts': `import { defineConfig } from 'vite'\n\nexport default defineConfig({\n  server: { host: '0.0.0.0' },\n})\n`,
+    'vite.config.ts': `import { defineConfig } from 'vite'\n\nexport default defineConfig({\n  server: { host: '0.0.0.0', allowedHosts: true },\n})\n`,
     'styles/index.css': slideStyles,
     'README.md': `# ${config.title || 'Slidev deck'}\n\nGenerated with Decksmith.\n\n## Run locally\n\n\`\`\`bash\nnpm install\nnpm run dev\n\`\`\`\n\nOpen the local URL printed by Slidev. Edit \`slides.md\` to change the deck.\n`,
   }
@@ -41,24 +41,4 @@ export function createProjectFiles(
   for (const [name, content] of Object.entries(assets)) files[`public/assets/${name}`] = content
   if (Object.keys(assets).length === 0) files['public/assets/.gitkeep'] = ''
   return files
-}
-
-export function toWebContainerTree(files: ProjectFiles) {
-  type TreeNode = { file?: { contents: string | Uint8Array }; directory?: Record<string, TreeNode> }
-  const root: Record<string, TreeNode> = {}
-
-  for (const [path, contents] of Object.entries(files)) {
-    const parts = path.split('/')
-    let level = root
-    parts.forEach((part, index) => {
-      const isFile = index === parts.length - 1
-      if (isFile) {
-        level[part] = { file: { contents } }
-      } else {
-        level[part] ??= { directory: {} }
-        level = level[part].directory ??= {}
-      }
-    })
-  }
-  return root
 }

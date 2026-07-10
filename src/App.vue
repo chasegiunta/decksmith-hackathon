@@ -25,7 +25,7 @@ import { HostedAiProvider } from '@/lib/ai'
 import { createProjectZip, downloadBlob, slugify } from '@/lib/export'
 import { generateMarkdown, parseOutline, updateMarkdownHeadmatter } from '@/lib/markdown'
 import { createProjectFiles } from '@/lib/project'
-import { useWebContainer } from '@/composables/useWebContainer'
+import { useVercelPreview } from '@/composables/useVercelPreview'
 import type { DeckConfig, ExtractedPdf, GeneratedDeck } from '@/types/deck'
 
 type WorkStatus = 'idle' | 'extracting' | 'ready' | 'generating' | 'generated' | 'error'
@@ -50,7 +50,7 @@ const isDraggingOver = ref(false)
 const showTerminal = ref(false)
 const hasManualEdits = ref(false)
 
-const preview = useWebContainer()
+const preview = useVercelPreview()
 const currentStep = computed(() => {
   if (!pdf.value) return 1
   if (!markdown.value) return 2
@@ -80,13 +80,13 @@ const coverDataUrl = computed(() => {
 })
 const projectFiles = computed(() => createProjectFiles(markdown.value, config, assets.value))
 const canGenerate = computed(() => Boolean(pdf.value) && status.value !== 'generating' && status.value !== 'extracting')
-const isPreviewBusy = computed(() => ['booting', 'installing', 'starting'].includes(preview.status.value))
+const isPreviewBusy = computed(() => ['creating', 'starting', 'syncing'].includes(preview.status.value))
 const friendlyPreviewMessage = computed(() => {
   const messages = {
     idle: 'Your presentation preview is ready to be opened.',
-    booting: 'Preparing your preview…',
-    installing: 'Setting up your presentation…',
+    creating: 'Preparing your preview…',
     starting: 'Opening your presentation…',
+    syncing: 'Saving your latest changes…',
     ready: 'Your preview is up to date.',
   } as const
   return messages[preview.status.value as keyof typeof messages] ?? preview.message.value
@@ -182,6 +182,7 @@ async function downloadProject() {
 }
 
 function resetPdf() {
+  void preview.stop()
   pdf.value = undefined
   deck.value = undefined
   markdown.value = ''
@@ -202,7 +203,7 @@ function resetPdf() {
         </a>
 
         <div class="flex items-center gap-2.5">
-          <span v-if="!pdf" class="hidden items-center gap-2 text-[13px] text-white/55 md:inline-flex"><span class="size-1.5 rounded-full bg-[#62d7ad]"></span>Your PDF stays in your browser</span>
+          <span v-if="!pdf" class="hidden items-center gap-2 text-[13px] text-white/55 md:inline-flex"><span class="size-1.5 rounded-full bg-[#62d7ad]"></span>Your presentation stays private</span>
           <span v-else class="hidden max-w-[260px] items-center gap-2 truncate rounded-full border border-white/12 bg-white/[.07] px-3 py-2 text-[12px] text-white/70 lg:inline-flex"><FileText :size="14" />{{ pdf.fileName }}<button class="grid cursor-pointer place-items-center text-white/50 transition-transform duration-150 ease-snappy active:scale-90 motion-reduce:transition-none" aria-label="Remove PDF" @click="resetPdf"><X :size="14" /></button></span>
           <button v-if="markdown" class="hidden h-10 cursor-pointer items-center gap-2 rounded-xl border border-white/15 bg-white/[.06] px-4 text-[13px] font-medium text-white/80 transition-[transform,background-color] duration-150 ease-snappy hover:bg-white/10 active:scale-[.97] motion-reduce:transition-none sm:inline-flex" @click="downloadMarkdown"><FileDown :size="16" />Download slides</button>
           <button v-if="markdown" class="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-white px-4 text-[13px] font-semibold text-navy shadow-[0_6px_18px_rgba(0,0,0,.16)] transition-transform duration-150 ease-snappy active:scale-[.97] motion-reduce:transition-none" @click="downloadProject"><FileArchive :size="16" />Download presentation</button>
@@ -317,7 +318,7 @@ function resetPdf() {
                 </div>
                 <div v-if="showTerminal" class="absolute right-8 bottom-8 left-8 max-h-[45%] overflow-hidden rounded-2xl border border-[#283448] bg-[#071426]/95 text-white shadow-[0_20px_55px_rgba(7,20,38,.28)]"><div class="flex h-10 items-center justify-between border-b border-white/10 px-3.5 text-[11px] text-white/60"><span>Troubleshooting details</span><button class="cursor-pointer transition-transform duration-150 active:scale-90" @click="showTerminal = false"><X :size="15" /></button></div><pre class="m-0 max-h-[230px] overflow-auto p-4 font-mono text-[11px] leading-relaxed whitespace-pre-wrap text-white/70">{{ preview.terminal.value.join('\n') }}</pre></div>
               </div>
-              <div class="flex h-9 items-center gap-2 border-t border-[#e9ecf0] px-4 text-[11px] text-[#89919d]" :class="{ 'text-[#368567]': preview.status.value === 'ready', 'text-[#aa5862]': ['error', 'unsupported'].includes(preview.status.value) }"><span class="size-1.5 rounded-full" :class="preview.status.value === 'ready' ? 'bg-[#4db78c]' : ['error', 'unsupported'].includes(preview.status.value) ? 'bg-[#d77983]' : 'bg-[#a7aeb8]' "></span>{{ friendlyPreviewMessage }}</div>
+              <div class="flex h-9 items-center gap-2 border-t border-[#e9ecf0] px-4 text-[11px] text-[#89919d]" :class="{ 'text-[#368567]': preview.status.value === 'ready', 'text-[#aa5862]': preview.status.value === 'error' }"><span class="size-1.5 rounded-full" :class="preview.status.value === 'ready' ? 'bg-[#4db78c]' : preview.status.value === 'error' ? 'bg-[#d77983]' : 'bg-[#a7aeb8]' "></span>{{ friendlyPreviewMessage }}</div>
             </section>
           </div>
         </div>

@@ -4,6 +4,9 @@
   "functions": {
     "api/generate.ts": {
       "maxDuration": 60
+    },
+    "api/preview/*.ts": {
+      "maxDuration": 60
     }
   }
 }
