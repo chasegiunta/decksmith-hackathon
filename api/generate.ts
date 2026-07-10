@@ -17,6 +17,27 @@ interface GenerateRequest {
   }
 }
 
+const deckToolSchema = {
+  type: 'object',
+  required: ['title', 'slides'],
+  properties: {
+    title: { type: 'string' },
+    slides: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['title', 'body'],
+        properties: {
+          title: { type: 'string' },
+          body: { type: 'array', items: { type: 'string' } },
+          speakerNotes: { type: 'string' },
+          sourcePages: { type: 'array', items: { type: 'integer' } },
+        },
+      },
+    },
+  },
+} as const
+
 function isGenerateRequest(value: unknown): value is GenerateRequest {
   if (!value || typeof value !== 'object') return false
   const input = value as Partial<GenerateRequest>
@@ -36,7 +57,7 @@ function isGenerateRequest(value: unknown): value is GenerateRequest {
 function systemPrompt(config: GenerateRequest['config']): string {
   return `You are an expert presentation editor. Rewrite source material into a coherent Slidev deck.
 
-Return JSON only, with this exact shape:
+Call the submit_deck tool exactly once with this shape:
 {"title":"Deck title","slides":[{"title":"Slide title","body":["concise point"],"speakerNotes":"optional notes","sourcePages":[1]}]}
 
 Rules:
@@ -48,7 +69,7 @@ Rules:
 - Tone: ${config.tone}. Density: ${config.density}.
 - ${config.includeNotes ? 'Include helpful speakerNotes for every substantive slide.' : 'Omit speakerNotes.'}
 - ${config.preserveSourceReferences ? 'Include accurate sourcePages for each slide.' : 'sourcePages may be omitted.'}
-- Do not emit Markdown fences, commentary, or fields outside the schema.`
+- Do not emit commentary or fields outside the tool schema.`
 }
 
 function sourcePrompt(input: GenerateRequest): string {
@@ -85,6 +106,15 @@ export default async function handler(request: VercelRequest, response: VercelRe
       body: JSON.stringify({
         model,
         max_tokens: 12_000,
+        tools: [{
+          type: 'function',
+          function: {
+            name: 'submit_deck',
+            description: 'Submit the complete presentation deck.',
+            parameters: deckToolSchema,
+          },
+        }],
+        tool_choice: { type: 'function', function: { name: 'submit_deck' } },
         messages: [
           { role: 'system', content: systemPrompt(body.config) },
           { role: 'user', content: sourcePrompt(body) },
@@ -92,7 +122,13 @@ export default async function handler(request: VercelRequest, response: VercelRe
       }),
     })
     const result = await upstream.json().catch(() => null) as {
-      choices?: Array<{ message?: { content?: string } }>
+      choices?: Array<{
+        finish_reason?: string
+        message?: {
+          content?: string
+          tool_calls?: Array<{ function?: { name?: string; arguments?: string } }>
+        }
+      }>
       error?: { message?: string } | string
     } | null
     if (!upstream.ok) {
@@ -100,7 +136,10 @@ export default async function handler(request: VercelRequest, response: VercelRe
       return response.status(upstream.status >= 500 ? 502 : upstream.status).json({ error: upstreamMessage || 'The presentation service rejected the request.' })
     }
 
-    const output = result?.choices?.[0]?.message?.content
+    const choice = result?.choices?.[0]
+    if (choice?.finish_reason === 'length') return response.status(502).json({ error: 'The source produced a presentation that was too long. Try the Detailed setting less often or use a shorter PDF.' })
+    const toolCall = choice?.message?.tool_calls?.find((call) => call.function?.name === 'submit_deck')
+    const output = toolCall?.function?.arguments || choice?.message?.content
     if (!output) return response.status(502).json({ error: 'The presentation service returned an empty response.' })
     return response.status(200).json({ output })
   } catch {

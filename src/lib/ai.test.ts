@@ -4,7 +4,11 @@ import type { DeckConfig, ExtractedPdf } from '@/types/deck'
 
 const config: DeckConfig = {
   title: 'A useful deck',
-  theme: 'seriph',
+  variant: 'editorial',
+  accent: '#0f7cff',
+  atmosphere: 'none',
+  logo: '',
+  logoInvert: false,
   density: 'balanced',
   tone: 'executive',
   includeNotes: true,
@@ -22,11 +26,12 @@ afterEach(() => vi.unstubAllGlobals())
 describe('hosted AI provider', () => {
   it('uses the same-origin generation function without browser credentials', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
-      output: '{"title":"A useful deck","slides":[{"title":"Opening","body":["A clear point"]}]}',
+      output: '{"slides":[{"title":"Opening","body":["A clear point"]}]}',
     }), { status: 200, headers: { 'content-type': 'application/json' } }))
     vi.stubGlobal('fetch', fetchMock)
 
     const result = await new HostedAiProvider().generateDeck({ pdf, config })
+    expect(result.title).toBe('A useful deck')
     expect(result.slides[0]?.title).toBe('Opening')
     expect(fetchMock).toHaveBeenCalledOnce()
     const [url, options] = fetchMock.mock.calls[0] as [string, RequestInit]

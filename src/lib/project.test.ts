@@ -6,7 +6,11 @@ import type { DeckConfig } from '@/types/deck'
 
 const config: DeckConfig = {
   title: 'Quarterly plan',
-  theme: 'seriph',
+  variant: 'boardroom',
+  accent: '#ff8b38',
+  atmosphere: 'mesh',
+  logo: '',
+  logoInvert: false,
   density: 'airy',
   tone: 'executive',
   includeNotes: true,
@@ -25,6 +29,8 @@ describe('Slidev project generation', () => {
     expect(files).toHaveProperty('public/assets/cover.png')
     expect(files['vite.config.ts']).toContain('allowedHosts: true')
     expect(files['global-top.vue']).toContain("message.type !== 'decksmith:navigate'")
+    expect(files['package.json']).toContain('slidev-theme-tahta')
+    expect(files['package.json']).toContain('echarts')
   })
 
   it('exports every project file into a readable zip', async () => {

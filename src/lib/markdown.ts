@@ -1,11 +1,5 @@
 import type { DeckConfig, GeneratedDeck, GeneratedSlide } from '@/types/deck'
 
-const densityClasses = {
-  airy: 'deck-airy',
-  balanced: 'deck-balanced',
-  dense: 'deck-dense',
-} as const
-
 function yamlString(value: string): string {
   return JSON.stringify(value.replace(/[\r\n]+/g, ' ').trim())
 }
@@ -19,18 +13,27 @@ function escapeCommentEnd(value: string): string {
 }
 
 export function buildHeadmatter(config: DeckConfig): string {
-  return [
+  const lines = [
     '---',
-    `theme: ${config.theme}`,
+    'theme: slidev-theme-tahta',
     `title: ${yamlString(config.title || 'Untitled deck')}`,
-    `class: ${densityClasses[config.density]}`,
+    'themeConfig:',
+    `  variant: ${config.variant}`,
+    `  accent: ${yamlString(config.accent)}`,
+    '  lang: en',
+  ]
+  if (config.logo.trim()) lines.push(`  logo: ${yamlString(config.logo)}`)
+  if (config.logoInvert) lines.push('  logoInvert: true')
+  if (config.atmosphere !== 'none') lines.push(`bg: ${config.atmosphere}`)
+  lines.push(
     'layout: cover',
     'drawings:',
     '  persist: false',
     'transition: slide-left',
     'mdc: true',
     '---',
-  ].join('\n')
+  )
+  return lines.join('\n')
 }
 
 function slideToMarkdown(slide: GeneratedSlide, config: DeckConfig): string {

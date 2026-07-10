@@ -28,7 +28,62 @@ function extractJson(raw: string): string {
   return unfenced.slice(start, end + 1)
 }
 
-export function parseGeneratedDeck(raw: string): GeneratedDeck {
+function decodeJsonField(value: unknown): unknown {
+  let decoded = value
+  for (let depth = 0; depth < 4 && typeof decoded === 'string'; depth += 1) {
+    const candidate = decoded.replace(/^\s*```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim()
+    const representations = [candidate]
+    if (candidate.includes('\\"')) representations.push(candidate.replaceAll('\\"', '"'))
+    const attempts = representations.flatMap((representation) => {
+      const shaped = [representation]
+      const arrayStart = representation.indexOf('[')
+      const arrayEnd = representation.lastIndexOf(']')
+      const objectStart = representation.indexOf('{')
+      const objectEnd = representation.lastIndexOf('}')
+      if (arrayStart >= 0 && arrayEnd > arrayStart) shaped.push(representation.slice(arrayStart, arrayEnd + 1))
+      if (objectStart >= 0 && objectEnd > objectStart) shaped.push(representation.slice(objectStart, objectEnd + 1))
+      return shaped
+    })
+
+    let next: unknown = decoded
+    for (const attempt of attempts) {
+      try {
+        next = JSON.parse(attempt) as unknown
+        break
+      } catch {
+        // Try the next safe JSON-shaped representation.
+      }
+    }
+    if (next === decoded) return decoded
+    decoded = next
+  }
+  return decoded
+}
+
+function normalizeGeneratedDeck(value: unknown, fallbackTitle?: string): unknown {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return value
+  const deck = value as Record<string, unknown>
+  const decodedSlides = decodeJsonField(deck.slides)
+  const embeddedDeck = decodedSlides && typeof decodedSlides === 'object' && !Array.isArray(decodedSlides)
+    ? decodedSlides as Record<string, unknown>
+    : undefined
+  const rawSlides = embeddedDeck ? decodeJsonField(embeddedDeck.slides) : decodedSlides
+  const slides = Array.isArray(rawSlides)
+    ? rawSlides.map((entry) => {
+        if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return entry
+        const slide = entry as Record<string, unknown>
+        const decodedBody = decodeJsonField(slide.body)
+        const body = typeof decodedBody === 'string' && decodedBody.trim() ? [decodedBody] : decodedBody
+        return { ...slide, body, sourcePages: decodeJsonField(slide.sourcePages) }
+      })
+    : decodedSlides
+  const fallback = fallbackTitle?.trim().slice(0, 160)
+  const suppliedTitle = deck.title ?? embeddedDeck?.title
+  const title = (suppliedTitle == null || suppliedTitle === '') && fallback ? fallback : suppliedTitle
+  return { ...deck, title, slides }
+}
+
+export function parseGeneratedDeck(raw: string, fallbackTitle?: string): GeneratedDeck {
   let value: unknown
   try {
     value = JSON.parse(extractJson(raw))
@@ -37,7 +92,7 @@ export function parseGeneratedDeck(raw: string): GeneratedDeck {
     throw new ModelOutputError('The AI response was not valid JSON. Try generating again.')
   }
 
-  const result = generatedDeckSchema.safeParse(value)
+  const result = generatedDeckSchema.safeParse(normalizeGeneratedDeck(value, fallbackTitle))
   if (!result.success) {
     const issue = result.error.issues[0]
     const location = issue?.path.join('.') || 'response'

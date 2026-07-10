@@ -4,7 +4,11 @@ import type { DeckConfig, GeneratedDeck } from '@/types/deck'
 
 const config: DeckConfig = {
   title: 'A useful deck',
-  theme: 'seriph',
+  variant: 'editorial',
+  accent: '#0f7cff',
+  atmosphere: 'grain',
+  logo: '',
+  logoInvert: false,
   density: 'balanced',
   tone: 'educational',
   includeNotes: true,
@@ -22,8 +26,10 @@ const deck: GeneratedDeck = {
 describe('Slidev markdown generation', () => {
   it('generates headmatter, notes, references, and semantic slides', () => {
     const markdown = generateMarkdown(deck, config)
-    expect(markdown).toContain('theme: seriph')
-    expect(markdown).toContain('class: deck-balanced')
+    expect(markdown).toContain('theme: slidev-theme-tahta')
+    expect(markdown).toContain('  variant: editorial')
+    expect(markdown).toContain('  accent: "#0f7cff"')
+    expect(markdown).toContain('bg: grain')
     expect(markdown).toContain('<!--\nSay hello.\n-->')
     expect(markdown).toContain('Source p. 2, p. 3')
     expect(parseOutline(markdown).map((item) => item.title)).toEqual(['Opening', 'Outcome'])
@@ -37,8 +43,9 @@ describe('Slidev markdown generation', () => {
 
   it('updates deck config without discarding edited slide content', () => {
     const edited = `${generateMarkdown(deck, config)}\nCustom ending`
-    const updated = updateMarkdownHeadmatter(edited, { ...config, theme: 'default', title: 'Renamed' })
-    expect(updated).toContain('theme: default')
+    const updated = updateMarkdownHeadmatter(edited, { ...config, variant: 'signal', accent: '#22ddcc', title: 'Renamed' })
+    expect(updated).toContain('  variant: signal')
+    expect(updated).toContain('  accent: "#22ddcc"')
     expect(updated).toContain('title: "Renamed"')
     expect(updated).toContain('Custom ending')
   })

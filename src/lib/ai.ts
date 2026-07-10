@@ -31,6 +31,7 @@ export class HostedAiProvider implements AiProvider {
       throw new Error(payload?.error || `Presentation generation failed (${response.status}).`)
     }
     if (!payload?.output) throw new Error('The presentation service returned an empty response. Try again.')
-    return parseGeneratedDeck(payload.output)
+    const fallbackTitle = input.config.title || input.pdf.fileName.replace(/\.pdf$/i, '')
+    return parseGeneratedDeck(payload.output, fallbackTitle)
   }
 }

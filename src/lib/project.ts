@@ -1,16 +1,7 @@
 import type { DeckConfig, ProjectFiles } from '@/types/deck'
 
 const slideStyles = `
-:root { --deck-accent: #65d8a6; }
-.slidev-layout { font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
-.slidev-layout h1 { color: var(--deck-accent); letter-spacing: -0.04em; }
-.slidev-layout li { margin-block: .65rem; }
-.deck-airy { font-size: 1.18rem; }
-.deck-airy li { margin-block: 1rem; }
-.deck-balanced { font-size: 1rem; }
-.deck-dense { font-size: .86rem; }
-.deck-dense li { margin-block: .35rem; }
-.source-ref { position: absolute; right: 2rem; bottom: 1.4rem; font-size: .58rem; opacity: .48; }
+.source-ref { position: absolute; right: var(--pad-x, 2rem); bottom: 1.2rem; font-family: var(--font-mono); font-size: .56rem; color: var(--fg-dim); opacity: .72; }
 `.trim()
 
 const previewBridge = `<script setup lang="ts">
@@ -48,9 +39,8 @@ export function createProjectFiles(
       scripts: { dev: 'slidev --bind 0.0.0.0', build: 'slidev build', export: 'slidev export' },
       dependencies: {
         '@slidev/cli': '^52.17.0',
-        '@slidev/theme-apple-basic': 'latest',
-        '@slidev/theme-default': 'latest',
-        '@slidev/theme-seriph': 'latest',
+        'slidev-theme-tahta': '^0.13.2',
+        echarts: '^6.1.0',
         vue: '^3.5.39',
       },
     }, null, 2),

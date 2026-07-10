@@ -54,7 +54,11 @@ export function verifyPreviewToken(token: unknown): PreviewTokenPayload {
 
   const supplied = Buffer.from(encodedSignature, 'base64url')
   const expected = signature(encodedPayload)
-  if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) {
+  if (
+    supplied.toString('base64url') !== encodedSignature
+    || supplied.length !== expected.length
+    || !timingSafeEqual(supplied, expected)
+  ) {
     throw new Error('The preview session is invalid.')
   }
 
