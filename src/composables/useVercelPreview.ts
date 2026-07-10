@@ -15,6 +15,7 @@ const url = ref('')
 const message = ref('Preview has not been started.')
 const terminal = ref<string[]>([])
 let session = ''
+let serverUrl = ''
 let startPromise: Promise<void> | undefined
 let updateQueue = Promise.resolve()
 
@@ -48,7 +49,7 @@ async function previewRequest(path: string, body: Record<string, unknown>, keepa
   return result
 }
 
-async function create(files: ProjectFiles) {
+async function create(files: ProjectFiles, expose: boolean) {
   status.value = 'creating'
   message.value = 'Preparing a private presentation workspace…'
   terminal.value = []
@@ -60,33 +61,58 @@ async function create(files: ProjectFiles) {
   message.value = 'Opening your presentation…'
   log('Slidev is ready. Opening the live preview…')
   session = result.session
-  url.value = result.url
+  serverUrl = result.url
+  if (expose) url.value = result.url
   status.value = 'ready'
   message.value = 'Live Slidev preview is ready.'
 }
 
 export function useVercelPreview() {
-  async function start(files: ProjectFiles): Promise<void> {
-    if (status.value === 'ready' && session) return update(files)
-    if (session) await stop()
-    if (!startPromise) {
-      startPromise = create(files).catch((error: unknown) => {
-        status.value = 'error'
-        message.value = error instanceof Error ? error.message : 'The presentation preview could not start.'
-        log(message.value)
-        throw error
-      }).finally(() => { startPromise = undefined })
-    }
+  async function prewarm(files: ProjectFiles): Promise<void> {
+    if (session || startPromise) return
+    startPromise = create(files, false).catch((error: unknown) => {
+      status.value = 'error'
+      message.value = error instanceof Error ? error.message : 'The presentation preview could not start.'
+      log(message.value)
+      throw error
+    }).finally(() => { startPromise = undefined })
     await startPromise
   }
 
-  async function update(files: ProjectFiles): Promise<void> {
+  async function start(files: ProjectFiles): Promise<void> {
+    if (status.value === 'ready' && session) {
+      await update(files, false)
+      url.value = serverUrl
+      return
+    }
+    if (startPromise) {
+      status.value = 'syncing'
+      message.value = 'Finishing your live preview…'
+      await startPromise
+      await update(files, false)
+      url.value = serverUrl
+      return
+    }
+    if (session) await stop()
+    startPromise = create(files, true).catch((error: unknown) => {
+      status.value = 'error'
+      message.value = error instanceof Error ? error.message : 'The presentation preview could not start.'
+      log(message.value)
+      throw error
+    }).finally(() => { startPromise = undefined })
+    await startPromise
+  }
+
+  async function update(files: ProjectFiles, expose = true): Promise<void> {
     if (!session || !['ready', 'syncing'].includes(status.value)) return
     updateQueue = updateQueue.catch(() => undefined).then(async () => {
       status.value = 'syncing'
       message.value = 'Saving your latest changes…'
       const result = await previewRequest('/api/preview/update', { session, files: serializeProjectFiles(files) })
-      if (result.url) url.value = result.url
+      if (result.url) {
+        serverUrl = result.url
+        if (expose) url.value = result.url
+      }
       status.value = 'ready'
       message.value = 'Live Slidev preview is ready.'
     }).catch((error: unknown) => {
@@ -100,6 +126,7 @@ export function useVercelPreview() {
   async function stop(keepalive = false): Promise<void> {
     const activeSession = session
     session = ''
+    serverUrl = ''
     url.value = ''
     status.value = 'idle'
     message.value = 'Preview has not been started.'
@@ -117,6 +144,7 @@ export function useVercelPreview() {
     message: readonly(message),
     terminal: readonly(terminal),
     start,
+    prewarm,
     update,
     stop,
   }

@@ -30,11 +30,10 @@ npm run build
 
 ## Browser flow
 
-1. Upload a text-based PDF (up to 25 MB and 80 pages).
-2. Configure the deck and create the first draft.
-3. Generate validated slide data and edit the resulting Slidev markdown.
-4. Start the live preview. A Vercel Sandbox restores the preinstalled Slidev environment and opens the deck in an iframe.
-5. Download either `slides.md` or a complete project zip with themes, styles, assets, and a README.
+1. Configure the presentation and upload a text-based PDF (up to 25 MB and 80 pages).
+2. While the PDF is processed, a Vercel Sandbox restores the preinstalled Slidev environment in the background.
+3. Create the first draft, then edit the validated Slidev markdown while the live preview updates automatically.
+4. Download either `slides.md` or a complete project zip with themes, styles, assets, and a README.
 
 The browser calls the same-origin `/api/generate` route. The LiteLLM key is read only by the Vercel Function and is never included in the browser bundle.
 

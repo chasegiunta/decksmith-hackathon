@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { createPreviewToken, decodePreviewFiles, verifyPreviewToken } from './preview'
+import { createPreviewToken, decodePreviewFiles, extractModuleUrls, verifyPreviewToken } from './preview'
 
 beforeEach(() => {
   process.env.PREVIEW_SESSION_SECRET = 'test-secret-that-is-at-least-thirty-two-characters'
@@ -28,5 +28,20 @@ describe('preview request protection', () => {
     expect(files[0]?.content).toBe('# Hello')
     expect(files[1]?.content).toEqual(Buffer.from([1, 2, 3]))
     expect(() => decodePreviewFiles([{ path: '../secret', content: '', encoding: 'utf8' }])).toThrow('invalid')
+  })
+
+  it('discovers same-origin Vite modules without crawling external assets', () => {
+    const modules = extractModuleUrls(`
+      <script type="module" src="/@slidev/client/main.ts"></script>
+      import { ref } from '/node_modules/.vite/deps/vue.js?v=123'
+      export { setup } from './setup.ts'
+      import('https://example.com/external.js')
+      <link href="/logo.svg">
+    `, 'https://sandbox.vercel.run/')
+    expect(modules).toEqual([
+      'https://sandbox.vercel.run/node_modules/.vite/deps/vue.js?v=123',
+      'https://sandbox.vercel.run/setup.ts',
+      'https://sandbox.vercel.run/@slidev/client/main.ts',
+    ])
   })
 })

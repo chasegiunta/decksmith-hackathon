@@ -53,23 +53,11 @@ const dropZone = ref<HTMLElement>()
 const isDraggingOver = ref(false)
 const showTerminal = ref(false)
 const hasManualEdits = ref(false)
-const hasDownloaded = ref(false)
 const previewFrame = ref<HTMLIFrameElement>()
 const previewShell = ref<HTMLElement>()
 const isPreviewFullscreen = ref(false)
 
 const preview = useVercelPreview()
-const currentStep = computed(() => {
-  if (!markdown.value) return 1
-  if (hasDownloaded.value) return 4
-  return preview.status.value === 'ready' ? 3 : 2
-})
-const journeySteps = [
-  { number: 1, label: 'Upload', description: 'Source & style' },
-  { number: 2, label: 'Edit', description: 'Review your draft' },
-  { number: 3, label: 'Preview', description: 'See it live' },
-  { number: 4, label: 'Share', description: 'Download files' },
-]
 const outline = computed(() => markdown.value ? parseOutline(markdown.value) : [])
 const assets = computed<Record<string, Uint8Array>>(() => {
   const result: Record<string, Uint8Array> = {}
@@ -125,11 +113,14 @@ async function loadPdf(file: File) {
   progress.value = { current: 0, total: 0 }
   deck.value = undefined
   markdown.value = ''
+  await preview.stop()
   try {
     const { extractPdf } = await import('@/lib/pdf')
     pdf.value = await extractPdf(file, (current, total) => { progress.value = { current, total } })
     if (!config.title) config.title = file.name.replace(/\.pdf$/i, '')
     status.value = 'ready'
+    const preparingDeck = createProjectFiles('---\ntitle: Preparing your presentation\n---\n\n# Preparing your presentation…', config, assets.value)
+    void preview.prewarm(preparingDeck).catch(() => undefined)
   } catch (cause) {
     pdf.value = undefined
     status.value = 'error'
@@ -147,8 +138,8 @@ async function generateDeck() {
     if (!config.title.trim()) config.title = deck.value.title
     markdown.value = generateMarkdown(deck.value, config)
     hasManualEdits.value = false
-    hasDownloaded.value = false
     status.value = 'generated'
+    void preview.start(projectFiles.value).catch(() => undefined)
   } catch (cause) {
     status.value = 'error'
     error.value = cause instanceof Error ? cause.message : 'Deck generation failed. Try again.'
@@ -204,13 +195,11 @@ onMounted(() => document.addEventListener('fullscreenchange', onFullscreenChange
 onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFullscreenChange))
 
 function downloadMarkdown() {
-  hasDownloaded.value = true
   downloadBlob(new Blob([markdown.value], { type: 'text/markdown;charset=utf-8' }), `${slugify(config.title)}-slides.md`)
 }
 
 async function downloadProject() {
   const zip = await createProjectZip(projectFiles.value)
-  hasDownloaded.value = true
   downloadBlob(zip, `${slugify(config.title)}-slidev.zip`)
 }
 
@@ -221,7 +210,6 @@ function resetPdf() {
   markdown.value = ''
   status.value = 'idle'
   error.value = ''
-  hasDownloaded.value = false
   config.title = ''
 }
 </script>
@@ -245,20 +233,7 @@ function resetPdf() {
       </div>
     </header>
 
-    <nav class="h-[88px] border-b border-line bg-white" aria-label="Presentation progress">
-      <ol class="mx-auto flex h-full max-w-[920px] items-center overflow-x-auto px-6 max-[720px]:px-3">
-        <li v-for="step in journeySteps" :key="step.number" class="relative flex min-w-[220px] flex-1 items-center gap-3 pr-10 last:min-w-[160px] last:pr-0">
-          <span v-if="step.number < 4" class="absolute top-1/2 right-3 h-px w-[calc(100%-48px)] -translate-y-1/2" :class="currentStep > step.number ? 'bg-accent' : 'bg-[#dfe3ea]'" aria-hidden="true"></span>
-          <span class="relative z-10 grid size-9 shrink-0 place-items-center rounded-full border text-[13px] font-semibold transition-[background-color,border-color,color] duration-200 ease-snappy" :class="step.number < currentStep ? 'border-accent bg-accent text-white' : step.number === currentStep ? 'border-accent bg-white text-accent shadow-[0_0_0_5px_rgba(15,124,255,.10)]' : 'border-[#d7dce5] bg-white text-[#9aa2af]'">
-            <Check v-if="step.number < currentStep" :size="17" :stroke-width="2.5" />
-            <span v-else>{{ step.number }}</span>
-          </span>
-          <span class="relative z-10 bg-white pr-3"><strong class="block text-[13px] font-semibold" :class="step.number <= currentStep ? 'text-[#171a21]' : 'text-[#8d94a0]'">{{ step.label }}</strong><small class="mt-0.5 block whitespace-nowrap text-[11px] text-[#9aa2af]">{{ step.description }}</small></span>
-        </li>
-      </ol>
-    </nav>
-
-    <main class="h-[calc(100vh-160px)] overflow-auto bg-canvas max-[720px]:h-auto max-[720px]:min-h-[calc(100vh-160px)]">
+    <main class="h-[calc(100vh-72px)] overflow-auto bg-canvas max-[720px]:h-auto max-[720px]:min-h-[calc(100vh-72px)]">
       <section v-if="!markdown" class="upload-gradient flex min-h-full flex-col items-center px-6 py-12 text-center text-white max-[720px]:px-4">
         <div class="max-w-[840px]">
           <div class="mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[.07] px-4 py-2 text-[11px] font-semibold tracking-[0.12em] text-white/75 uppercase backdrop-blur-xl"><Sparkles :size="15" />From document to deck, in minutes</div>
@@ -325,7 +300,7 @@ function resetPdf() {
             </section>
 
             <section class="flex min-h-[560px] min-w-0 flex-col overflow-hidden rounded-[22px] border border-[#d9dee6] bg-white shadow-[0_18px_55px_rgba(24,39,75,.12)]">
-              <div class="flex h-16 shrink-0 items-center justify-between border-b border-[#e9ecf0] px-5"><div class="flex items-center gap-3"><span class="grid size-9 place-items-center rounded-xl bg-[#eef6ff] text-accent"><Play :size="16" fill="currentColor" /></span><span><strong class="block text-[14px] font-semibold text-[#252a33]">Presentation preview</strong><small class="mt-0.5 block text-[11px] text-[#929aa7]">Click through your slides before sharing</small></span></div><div class="flex items-center gap-2"><button v-if="preview.terminal.value.length" class="grid size-9 cursor-pointer place-items-center rounded-xl border border-[#dfe3e9] bg-white text-[#838b98] transition-transform duration-150 ease-snappy active:scale-[.95]" aria-label="Show troubleshooting details" @click="showTerminal = !showTerminal"><TerminalSquare :size="16" /></button><button class="inline-flex h-9 cursor-pointer items-center gap-2 rounded-xl bg-accent px-3.5 text-[12px] font-semibold text-white shadow-[0_7px_18px_rgba(15,124,255,.22)] transition-transform duration-150 ease-snappy active:scale-[.97] disabled:cursor-not-allowed disabled:opacity-45" :disabled="isPreviewBusy" @click="startPreview"><RefreshCw v-if="preview.status.value === 'ready'" :size="15" /><Play v-else :size="15" />{{ preview.status.value === 'ready' ? 'Refresh preview' : 'Open preview' }}</button></div></div>
+              <div class="flex h-16 shrink-0 items-center justify-between border-b border-[#e9ecf0] px-5"><div class="flex items-center gap-3"><span class="grid size-9 place-items-center rounded-xl bg-[#eef6ff] text-accent"><Play :size="16" fill="currentColor" /></span><span><strong class="block text-[14px] font-semibold text-[#252a33]">Presentation preview</strong><small class="mt-0.5 block text-[11px] text-[#929aa7]">Your live preview starts automatically</small></span></div><div class="flex items-center gap-2"><button v-if="preview.terminal.value.length" class="grid size-9 cursor-pointer place-items-center rounded-xl border border-[#dfe3e9] bg-white text-[#838b98] transition-transform duration-150 ease-snappy active:scale-[.95]" aria-label="Show troubleshooting details" @click="showTerminal = !showTerminal"><TerminalSquare :size="16" /></button><button v-if="preview.status.value === 'error'" class="inline-flex h-9 cursor-pointer items-center gap-2 rounded-xl bg-accent px-3.5 text-[12px] font-semibold text-white shadow-[0_7px_18px_rgba(15,124,255,.22)] transition-transform duration-150 ease-snappy active:scale-[.97]" @click="startPreview"><RefreshCw :size="15" />Try again</button></div></div>
               <div class="preview-grid relative min-h-0 flex-1 overflow-hidden p-[clamp(18px,2.5vw,34px)]">
                 <div v-if="preview.url.value" ref="previewShell" class="flex size-full min-h-0 flex-col overflow-hidden rounded-2xl border border-[#d9dee6] bg-white shadow-[0_14px_38px_rgba(29,46,79,.16)]">
                   <iframe ref="previewFrame" class="min-h-0 w-full flex-1 border-0 bg-white" :src="preview.url.value" title="Presentation preview" allow="fullscreen; screen-wake-lock" allowfullscreen></iframe>
@@ -343,8 +318,8 @@ function resetPdf() {
                   <div class="preview-illustration relative mb-7 h-[88px] w-[142px] rounded-xl border border-[#d9e0e9] bg-white shadow-[8px_9px_0_-3px_#eef2f7,8px_9px_0_-2px_#dfe5ed]"><div></div><span class="absolute right-4 bottom-4 text-accent"><Play :size="25" fill="currentColor" /></span></div>
                   <h3 class="text-[16px] font-semibold text-[#303640]">{{ isPreviewBusy ? 'Preparing your presentation…' : 'Ready when you are' }}</h3>
                   <p class="mx-6 mt-2 mb-5 max-w-[390px] text-[13px] leading-relaxed text-[#818996]">{{ friendlyPreviewMessage }}</p>
-                  <button v-if="!isPreviewBusy" class="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-accent px-4 text-[13px] font-semibold text-white shadow-[0_8px_20px_rgba(15,124,255,.24)] transition-transform duration-150 ease-snappy active:scale-[.97]" @click="startPreview"><Play :size="16" />Open presentation preview</button>
-                  <div v-else class="mt-3 h-1 w-[170px] overflow-hidden rounded-full bg-[#e2e7ee]"><span class="preview-progress block h-full w-[42%] rounded-full bg-accent motion-reduce:animate-pulse"></span></div>
+                  <button v-if="preview.status.value === 'error'" class="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-accent px-4 text-[13px] font-semibold text-white shadow-[0_8px_20px_rgba(15,124,255,.24)] transition-transform duration-150 ease-snappy active:scale-[.97]" @click="startPreview"><RefreshCw :size="16" />Try preview again</button>
+                  <div v-else-if="isPreviewBusy" class="mt-3 h-1 w-[170px] overflow-hidden rounded-full bg-[#e2e7ee]"><span class="preview-progress block h-full w-[42%] rounded-full bg-accent motion-reduce:animate-pulse"></span></div>
                 </div>
                 <div v-if="showTerminal" class="absolute right-8 bottom-8 left-8 max-h-[45%] overflow-hidden rounded-2xl border border-[#283448] bg-[#071426]/95 text-white shadow-[0_20px_55px_rgba(7,20,38,.28)]"><div class="flex h-10 items-center justify-between border-b border-white/10 px-3.5 text-[11px] text-white/60"><span>Troubleshooting details</span><button class="cursor-pointer transition-transform duration-150 active:scale-90" @click="showTerminal = false"><X :size="15" /></button></div><pre class="m-0 max-h-[230px] overflow-auto p-4 font-mono text-[11px] leading-relaxed whitespace-pre-wrap text-white/70">{{ preview.terminal.value.join('\n') }}</pre></div>
               </div>

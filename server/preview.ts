@@ -5,6 +5,15 @@ export const PREVIEW_PORT = 3030
 const MAX_FILES = 120
 const MAX_FILE_BYTES = 3_000_000
 const DEFAULT_TIMEOUT_MINUTES = 40
+const MODULE_WARMUP_LIMIT = 220
+const CRITICAL_MODULES = [
+  '/@slidev/configs',
+  '/@slidev/setups/root',
+  '/node_modules/@slidev/client/setup/routes.ts',
+  '/node_modules/@slidev/client/modules/v-mark.ts',
+  '/node_modules/@slidev/client/modules/v-motion.ts',
+  '/node_modules/@slidev/client/styles/index.ts',
+]
 
 export interface PreviewFileInput {
   path: string
@@ -117,12 +126,78 @@ async function ensureSlidev(sandbox: Sandbox) {
   if (running.exitCode !== 0) await startSlidev(sandbox)
 }
 
+export function extractModuleUrls(source: string, sourceUrl: string): string[] {
+  const origin = new URL(sourceUrl).origin
+  const matches = new Set<string>()
+  const patterns = [
+    /\b(?:from|import)\s*(?:\(\s*)?['"]([^'"]+)['"]/g,
+    /\b(?:src|href)=['"]([^'"]+)['"]/g,
+  ]
+  for (const pattern of patterns) {
+    for (const match of source.matchAll(pattern)) {
+      try {
+        const url = new URL(match[1] ?? '', sourceUrl)
+        if (url.origin !== origin || !/^https?:$/.test(url.protocol)) continue
+        if (/\.(?:png|jpe?g|gif|webp|svg|ico|woff2?|ttf|map)(?:\?|$)/i.test(url.pathname)) continue
+        matches.add(url.toString())
+      } catch {
+        // Ignore non-URL import expressions and malformed optional assets.
+      }
+    }
+  }
+  return [...matches]
+}
+
+async function fetchWarmModule(url: string): Promise<string> {
+  let lastStatus = 0
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    try {
+      const response = await fetch(url, { headers: { accept: 'text/html, application/javascript, text/css' } })
+      lastStatus = response.status
+      if (response.ok) return await response.text()
+    } catch {
+      // The port proxy can briefly lead the Vite process during cold startup.
+    }
+    await new Promise((resolve) => setTimeout(resolve, 200 * (attempt + 1)))
+  }
+  throw new Error(`Slidev module warmup failed with status ${lastStatus || 'unavailable'}.`)
+}
+
+async function warmModuleGraph(baseUrl: string) {
+  const queue = [baseUrl, ...CRITICAL_MODULES.map((path) => new URL(path, baseUrl).toString())]
+  const seen = new Set<string>()
+
+  while (queue.length && seen.size < MODULE_WARMUP_LIMIT) {
+    const batch = queue.splice(0, 4).filter((url) => !seen.has(url))
+    batch.forEach((url) => seen.add(url))
+    const results = await Promise.all(batch.map(async (url) => {
+      try {
+        return { source: await fetchWarmModule(url), url }
+      } catch {
+        return null
+      }
+    }))
+    for (const result of results) {
+      if (!result) continue
+      for (const importedUrl of extractModuleUrls(result.source, result.url)) {
+        if (!seen.has(importedUrl)) queue.push(importedUrl)
+      }
+    }
+  }
+
+  for (const path of CRITICAL_MODULES) await fetchWarmModule(new URL(path, baseUrl).toString())
+}
+
 async function waitForPreview(url: string) {
   const deadline = Date.now() + 20_000
   while (Date.now() < deadline) {
     try {
-      const response = await fetch(url, { method: 'HEAD', redirect: 'manual' })
-      if (response.ok) return
+      const response = await fetch(url, { redirect: 'manual' })
+      if (response.ok) {
+        await response.arrayBuffer()
+        await warmModuleGraph(url)
+        return
+      }
     } catch {
       // The route exists before Slidev has finished binding to its port.
     }
@@ -141,7 +216,7 @@ export async function createPreview(filesValue: unknown) {
     ports: [PREVIEW_PORT],
     timeout,
     persistent: false,
-    resources: { vcpus: 1 },
+    resources: { vcpus: 2 },
     networkPolicy: 'deny-all',
     tags: { app: 'decksmith', purpose: 'slidev-preview' },
   })
