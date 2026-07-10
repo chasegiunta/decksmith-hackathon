@@ -144,6 +144,7 @@ function PresentMode({
 }) {
   const slide = slides[activeIndex]
   const [speaking, setSpeaking] = useState(false)
+  const [paused, setPaused] = useState(false)
   const stoppedManuallyRef = useRef(false)
 
   const voices = useSpeechVoices()
@@ -155,48 +156,61 @@ function PresentMode({
   const [explicitVoiceName, setExplicitVoiceName] = useState<string | null>(null)
   const selectedVoiceName = explicitVoiceName ?? pickDefaultVoice(voices)?.name ?? null
 
-  const speak = useCallback(
-    (text: string, onEnd: () => void) => {
-      stoppedManuallyRef.current = false
-      window.speechSynthesis.cancel()
-      const utterance = new SpeechSynthesisUtterance(text)
-      utterance.rate = 1
-      utterance.voice = voices.find((voice) => voice.name === selectedVoiceName) ?? null
-      utterance.onstart = () => setSpeaking(true)
-      utterance.onend = () => {
-        setSpeaking(false)
-        if (!stoppedManuallyRef.current) onEnd()
-      }
-      utterance.onerror = () => setSpeaking(false)
-      window.speechSynthesis.speak(utterance)
-    },
-    [voices, selectedVoiceName],
-  )
+  // Plays continuously from `index` through the rest of the deck: speaks each slide's script,
+  // and on natural completion advances to and speaks the next one, all the way to the last
+  // slide — rather than narrating one slide and going silent. Slides with no script (narration
+  // failed or the page was blank) are shown briefly and skipped rather than stalling the chain.
+  // A plain function (not useCallback) so it can recurse via its own hoisted name.
+  function playFrom(index: number) {
+    if (index >= slides.length) return
+    onIndexChange(index)
 
-  const stopNarration = useCallback(() => {
-    stoppedManuallyRef.current = true
+    const target = slides[index]
+    if (!target?.script) {
+      playFrom(index + 1)
+      return
+    }
+
+    stoppedManuallyRef.current = false
     window.speechSynthesis.cancel()
-    setSpeaking(false)
-  }, [])
+    setPaused(false)
+    const utterance = new SpeechSynthesisUtterance(target.script)
+    utterance.rate = 1
+    utterance.voice = voices.find((voice) => voice.name === selectedVoiceName) ?? null
+    utterance.onstart = () => setSpeaking(true)
+    utterance.onend = () => {
+      setSpeaking(false)
+      if (!stoppedManuallyRef.current) playFrom(index + 1)
+    }
+    utterance.onerror = () => setSpeaking(false)
+    window.speechSynthesis.speak(utterance)
+  }
+
+  // Pauses/resumes mid-sentence, unlike stopping — the current utterance picks back up where it
+  // left off (browser-dependent, but supported everywhere that matters here) instead of
+  // restarting the slide from the beginning.
+  const togglePause = useCallback(() => {
+    if (paused) {
+      window.speechSynthesis.resume()
+      setPaused(false)
+    } else {
+      window.speechSynthesis.pause()
+      setPaused(true)
+    }
+  }, [paused])
 
   const goTo = useCallback(
     (index: number) => {
       stoppedManuallyRef.current = true
       window.speechSynthesis.cancel()
       setSpeaking(false)
+      setPaused(false)
       onIndexChange(index)
     },
     [onIndexChange],
   )
 
-  const playCurrent = () => {
-    if (!slide?.script) return
-    speak(slide.script, () => {
-      if (activeIndex < slides.length - 1) {
-        goTo(activeIndex + 1)
-      }
-    })
-  }
+  const playCurrent = () => playFrom(activeIndex)
 
   return (
     <div className="flex min-h-screen flex-col bg-black text-white">
@@ -246,17 +260,17 @@ function PresentMode({
         </button>
         <button
           onClick={playCurrent}
-          disabled={!slide?.script || speaking}
+          disabled={speaking}
           className="rounded-md bg-emerald-500 px-6 py-2 font-medium text-slate-950 disabled:opacity-40"
         >
           {speaking ? 'Speaking…' : '▶ Narrate'}
         </button>
         <button
-          onClick={stopNarration}
+          onClick={togglePause}
           disabled={!speaking}
           className="rounded-md border border-slate-700 px-4 py-2 disabled:opacity-30"
         >
-          ⏹ Stop
+          {paused ? '▶ Resume' : '⏸ Pause'}
         </button>
         <button
           onClick={() => goTo(Math.min(slides.length - 1, activeIndex + 1))}
