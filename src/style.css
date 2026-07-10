@@ -1,19 +1,19 @@
 @import "tailwindcss";
 
 @theme {
-  --color-canvas: #111410;
-  --color-ink: #eef0e8;
-  --color-line: #2a2e28;
-  --color-acid: #c9f071;
-  --color-mint: #76d5aa;
-  --font-display: Georgia, "Times New Roman", serif;
+  --color-canvas: #f6f7f9;
+  --color-ink: #171a21;
+  --color-line: #e2e6ec;
+  --color-accent: #0f7cff;
+  --color-navy: #071426;
+  --shadow-card: 0 12px 36px rgba(25, 39, 70, 0.07), 0 1px 3px rgba(25, 39, 70, 0.05);
   --ease-snappy: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 @layer base {
   :root {
-    color: #eceee7;
-    background: #10120f;
+    color: #171a21;
+    background: #f6f7f9;
     font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     font-optical-sizing: auto;
     font-synthesis: none;
@@ -50,17 +50,23 @@
   select:focus-visible,
   textarea:focus-visible,
   [role="button"]:focus-visible {
-    outline: 2px solid var(--color-acid);
+    outline: 2px solid var(--color-accent);
     outline-offset: 2px;
   }
 }
 
-.app-surface {
-  background: radial-gradient(circle at 66% 5%, rgba(118, 213, 170, 0.055), transparent 31%), var(--color-canvas);
+.upload-gradient {
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    radial-gradient(circle at 50% 88%, rgba(96, 173, 255, 0.88), transparent 38%),
+    linear-gradient(180deg, #071426 2%, #073785 51%, #0f7cff 78%, #b9d8ff 125%);
+  background-size: 96px 96px, 96px 96px, auto, auto;
 }
 
 .preview-grid {
-  background-image: radial-gradient(#2b3029 1px, transparent 1px);
+  background-color: #f7f9fc;
+  background-image: radial-gradient(#dce2ea 1px, transparent 1px);
   background-size: 16px 16px;
 }
 
@@ -71,14 +77,14 @@
   left: 15px;
   height: 3px;
   border-radius: 999px;
-  background: #3f4939;
+  background: #d6dce5;
   content: "";
 }
 
 .preview-illustration::before {
   top: 18px;
   width: 46px;
-  background: #8da365;
+  background: #79b8ff;
 }
 
 .preview-illustration::after {
@@ -108,16 +114,6 @@
   .preview-progress { animation: none; }
 }
 
-@media (prefers-reduced-transparency: reduce) {
-  .glass-chrome {
-    background: #141713;
-    backdrop-filter: none;
-  }
-}
-
 @media (prefers-contrast: more) {
-  .glass-chrome {
-    background: #10120f;
-    border-color: #62695f;
-  }
+  .upload-gradient { background: #071426; }
 }
