@@ -1,20 +1,20 @@
-import { defineConfig, globalIgnores } from "eslint/config";
-import nextVitals from "eslint-config-next/core-web-vitals";
-import nextTs from "eslint-config-next/typescript";
+import js from '@eslint/js'
+import pluginVue from 'eslint-plugin-vue'
+import vueTsEslintConfig from '@vue/eslint-config-typescript'
 
-const eslintConfig = defineConfig([
-  ...nextVitals,
-  ...nextTs,
-  // Override default ignores of eslint-config-next.
-  globalIgnores([
-    // Default ignores of eslint-config-next:
-    ".next/**",
-    "out/**",
-    "build/**",
-    "next-env.d.ts",
-    // Vendored, minified pdfjs worker copied into public/ for client-side PDF rendering.
-    "public/**",
-  ]),
-]);
-
-export default eslintConfig;
+export default [
+  { ignores: ['dist/**', 'coverage/**', 'node_modules/**'] },
+  js.configs.recommended,
+  ...pluginVue.configs['flat/recommended'],
+  ...vueTsEslintConfig(),
+  {
+    files: ['**/*.{ts,vue}'],
+    rules: {
+      'vue/multi-word-component-names': 'off',
+      'vue/max-attributes-per-line': 'off',
+      'vue/singleline-html-element-content-newline': 'off',
+      'vue/multiline-html-element-content-newline': 'off',
+      'vue/html-self-closing': ['error', { html: { void: 'always', normal: 'never', component: 'always' } }],
+    },
+  },
+]

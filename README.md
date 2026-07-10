@@ -1,38 +1,39 @@
-# Slide Deck Mode
+# Decksmith
 
-Upload a PDF → it becomes a narrated slideshow. Claude writes a short spoken script per page,
-your browser reads it out loud during "Present" mode.
+Decksmith is a browser-only Vue app that turns a PDF into an editable, runnable Slidev project.
 
-## How it works
+It extracts selectable PDF text locally, asks Anthropic to reorganize the source by topic, validates the returned slide JSON, generates `slides.md`, and runs the real Slidev development server inside a WebContainer. Nothing requires a local backend.
 
-1. The PDF is rendered entirely client-side with `pdfjs-dist` — each page becomes a canvas image,
-   and its text is extracted for narration input. No PDF ever touches the server.
-2. The extracted text for every page is sent once to `/api/narrate`, which asks Claude for a short,
-   conversational narration script per page and returns them as JSON.
-3. "Present" mode shows each page full-screen and speaks its script using the browser's built-in
-   `speechSynthesis` API (zero cost, zero extra API key), auto-advancing to the next slide when
-   narration finishes.
+## Requirements
 
-## Setup
+- Node.js 20.19+ or 22.12+
+- A Chromium-based browser with WebContainer support
+- An Anthropic API key for generation
+
+## Development
 
 ```bash
-nvm use   # or: nvm install (uses .nvmrc, Node 20+)
 npm install
-cp .env.local.example .env.local   # then fill in ANTHROPIC_API_KEY
 npm run dev
 ```
 
-Open http://localhost:3000, upload a PDF, wait for narration to generate, hit Present.
+Open the local URL printed by Vite. The development server sends matching `credentialless` cross-origin isolation headers required by WebContainers while allowing its cross-origin runtime assets to load.
 
-## Deploying (for a public URL)
+## Validation
 
-Easiest path: push this repo to GitHub, then import it at https://vercel.com/new — it auto-detects
-Next.js. Add `ANTHROPIC_API_KEY` under Project Settings → Environment Variables before your first
-deploy (or redeploy after adding it).
+```bash
+npm test
+npm run typecheck
+npm run lint
+npm run build
+```
 
-## Stretch ideas (if there's time left)
+## Browser flow
 
-- Swap browser TTS for a nicer voice (OpenAI TTS / ElevenLabs) via a `/api/tts` route.
-- Auto-advance through the whole deck instead of one slide at a time.
-- Let the user edit/regenerate a slide's script before presenting.
-- Export the narrated deck as a video (canvas + audio track).
+1. Upload a text-based PDF (up to 25 MB and 80 pages).
+2. Configure the deck and enter an Anthropic API key.
+3. Generate validated slide data and edit the resulting Slidev markdown.
+4. Start the live preview. The first boot installs Slidev inside the browser and can take a minute.
+5. Download either `slides.md` or a complete project zip with themes, styles, assets, and a README.
+
+API access is isolated behind `AiProvider` in `src/lib/ai.ts`, so a hosted provider can replace browser BYOK later without changing the editor or export pipeline.
