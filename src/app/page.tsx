@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from 'react'
 import { loadPdfPages, type PdfPage } from '@/lib/pdf'
+import { englishVoiceOptions, pickDefaultVoice, useSpeechVoices } from '@/lib/voices'
 
 type Slide = PdfPage & { script?: string }
 
@@ -143,22 +144,46 @@ function PresentMode({
 }) {
   const slide = slides[activeIndex]
   const [speaking, setSpeaking] = useState(false)
+  const stoppedManuallyRef = useRef(false)
 
-  const speak = useCallback((text: string, onEnd: () => void) => {
+  const voices = useSpeechVoices()
+  const voiceOptions = englishVoiceOptions(voices)
+
+  // Only tracks an explicit choice from the dropdown; falls back to a sensible default (prefers
+  // a British English voice) derived at render time once voices are available, so there's no
+  // need to sync state from an effect just to apply that default.
+  const [explicitVoiceName, setExplicitVoiceName] = useState<string | null>(null)
+  const selectedVoiceName = explicitVoiceName ?? pickDefaultVoice(voices)?.name ?? null
+
+  const speak = useCallback(
+    (text: string, onEnd: () => void) => {
+      stoppedManuallyRef.current = false
+      window.speechSynthesis.cancel()
+      const utterance = new SpeechSynthesisUtterance(text)
+      utterance.rate = 1
+      utterance.voice = voices.find((voice) => voice.name === selectedVoiceName) ?? null
+      utterance.onstart = () => setSpeaking(true)
+      utterance.onend = () => {
+        setSpeaking(false)
+        if (!stoppedManuallyRef.current) onEnd()
+      }
+      utterance.onerror = () => setSpeaking(false)
+      window.speechSynthesis.speak(utterance)
+    },
+    [voices, selectedVoiceName],
+  )
+
+  const stopNarration = useCallback(() => {
+    stoppedManuallyRef.current = true
     window.speechSynthesis.cancel()
-    const utterance = new SpeechSynthesisUtterance(text)
-    utterance.rate = 1
-    utterance.onstart = () => setSpeaking(true)
-    utterance.onend = () => {
-      setSpeaking(false)
-      onEnd()
-    }
-    window.speechSynthesis.speak(utterance)
+    setSpeaking(false)
   }, [])
 
   const goTo = useCallback(
     (index: number) => {
+      stoppedManuallyRef.current = true
       window.speechSynthesis.cancel()
+      setSpeaking(false)
       onIndexChange(index)
     },
     [onIndexChange],
@@ -179,6 +204,22 @@ function PresentMode({
         <span>
           Slide {activeIndex + 1} / {slides.length}
         </span>
+        {voiceOptions.length > 0 && (
+          <label className="flex items-center gap-2">
+            <span>Voice</span>
+            <select
+              value={selectedVoiceName ?? ''}
+              onChange={(e) => setExplicitVoiceName(e.target.value)}
+              className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-slate-200"
+            >
+              {voiceOptions.map((voice) => (
+                <option key={voice.name} value={voice.name}>
+                  {voice.name} ({voice.lang})
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <button onClick={onExit} className="hover:text-white">
           Exit ✕
         </button>
@@ -209,6 +250,13 @@ function PresentMode({
           className="rounded-md bg-emerald-500 px-6 py-2 font-medium text-slate-950 disabled:opacity-40"
         >
           {speaking ? 'Speaking…' : '▶ Narrate'}
+        </button>
+        <button
+          onClick={stopNarration}
+          disabled={!speaking}
+          className="rounded-md border border-slate-700 px-4 py-2 disabled:opacity-30"
+        >
+          ⏹ Stop
         </button>
         <button
           onClick={() => goTo(Math.min(slides.length - 1, activeIndex + 1))}
