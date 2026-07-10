@@ -2,6 +2,7 @@ import type { DeckConfig, ProjectFiles } from '@/types/deck'
 
 const slideStyles = `
 .source-ref { position: absolute; right: var(--pad-x, 2rem); bottom: 1.2rem; font-family: var(--font-mono); font-size: .56rem; color: var(--fg-dim); opacity: .72; }
+html.decksmith-embedded-preview #page-root nav { display: none !important; }
 `.trim()
 
 const previewBridge = `<script setup lang="ts">
@@ -12,14 +13,24 @@ const nav = useNav()
 
 function onDecksmithMessage(event: MessageEvent) {
   if (event.source !== window.parent || !event.data || typeof event.data !== 'object') return
-  const message = event.data as { type?: string; action?: string }
-  if (message.type !== 'decksmith:navigate') return
-  if (message.action === 'previous') void nav.prev()
-  if (message.action === 'next') void nav.next()
+  const message = event.data as { type?: string; action?: string; fullscreen?: boolean }
+  if (message.type === 'decksmith:navigate') {
+    if (message.action === 'previous') void nav.prev()
+    if (message.action === 'next') void nav.next()
+  }
+  if (message.type === 'decksmith:fullscreen' && typeof message.fullscreen === 'boolean') {
+    document.documentElement.classList.toggle('decksmith-embedded-preview', !message.fullscreen)
+  }
 }
 
-onMounted(() => window.addEventListener('message', onDecksmithMessage))
-onBeforeUnmount(() => window.removeEventListener('message', onDecksmithMessage))
+onMounted(() => {
+  if (window.parent !== window) document.documentElement.classList.add('decksmith-embedded-preview')
+  window.addEventListener('message', onDecksmithMessage)
+})
+onBeforeUnmount(() => {
+  document.documentElement.classList.remove('decksmith-embedded-preview')
+  window.removeEventListener('message', onDecksmithMessage)
+})
 </script>
 
 <template></template>

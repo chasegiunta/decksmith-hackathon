@@ -262,6 +262,18 @@ function sendPreviewCommand(action: "previous" | "next") {
   previewFrame.value?.focus();
 }
 
+function syncNativePreviewControls() {
+  const frameWindow = previewFrame.value?.contentWindow;
+  if (!frameWindow || !preview.url.value) return;
+  frameWindow.postMessage(
+    {
+      type: "decksmith:fullscreen",
+      fullscreen: isPreviewFullscreen.value,
+    },
+    new URL(preview.url.value).origin,
+  );
+}
+
 async function togglePreviewFullscreen() {
   if (document.fullscreenElement) {
     await document.exitFullscreen();
@@ -272,6 +284,7 @@ async function togglePreviewFullscreen() {
 
 function onFullscreenChange() {
   isPreviewFullscreen.value = document.fullscreenElement === previewShell.value;
+  syncNativePreviewControls();
 }
 
 onMounted(() =>
@@ -800,6 +813,7 @@ function resetPdf() {
                     title="Presentation preview"
                     allow="fullscreen; screen-wake-lock"
                     allowfullscreen
+                    @load="syncNativePreviewControls"
                   ></iframe>
                   <div
                     class="flex h-12 shrink-0 items-center justify-between border-t border-[#e4e8ee] bg-white px-3 text-[#616a77]"
