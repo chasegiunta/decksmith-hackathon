@@ -5,8 +5,8 @@ import {
   getDocument,
   type PDFDocumentProxy,
   type PDFPageProxy,
-} from 'pdfjs-dist'
-import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
+} from 'pdfjs-dist/legacy/build/pdf.mjs'
+import workerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url'
 import type { ExtractedPdf, ExtractedPdfImage, SourcePage } from '@/types/deck'
 import { PdfExtractionError, validateExtractedPages } from '@/lib/pdf-guards'
 import { isUsefulImage, sampledHash } from '@/lib/pdf-image-utils'
