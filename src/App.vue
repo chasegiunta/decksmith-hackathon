@@ -49,7 +49,6 @@ import {
   Maximize2,
   Minimize2,
   Images,
-  Palette,
   Play,
   Presentation,
   RefreshCw,
@@ -99,7 +98,6 @@ const status = ref<WorkStatus>("idle");
 const error = ref("");
 const progress = ref({ current: 0, total: 0 });
 const editorTab = ref("outline");
-const leftPanelView = ref("write");
 const selectedSlideIndex = ref(0);
 const dropZone = ref<HTMLElement>();
 const isDraggingOver = ref(false);
@@ -241,7 +239,6 @@ async function generateDeck() {
     hasManualEdits.value = false;
     selectedSlideIndex.value = 0;
     editorTab.value = "outline";
-    leftPanelView.value = "write";
     status.value = "generated";
     void preview.start(projectFiles.value).catch(() => undefined);
   } catch (cause) {
@@ -468,7 +465,9 @@ function resetPdf() {
                 align="end"
                 class="z-100 w-72 rounded-2xl border border-black/8 bg-white p-1.5 text-ink shadow-[0_18px_55px_rgba(5,16,37,.2),0_2px_8px_rgba(5,16,37,.08)] outline-none"
               >
-                <DropdownMenuLabel class="px-3 pt-2 pb-1.5 text-[11px] font-semibold tracking-[.08em] text-[#8a91a0] uppercase">
+                <DropdownMenuLabel
+                  class="px-3 pt-2 pb-1.5 text-[11px] font-semibold tracking-[.08em] text-[#8a91a0] uppercase"
+                >
                   Share your presentation
                 </DropdownMenuLabel>
                 <DropdownMenuItem
@@ -476,40 +475,88 @@ function resetPdf() {
                   :disabled="preview.status.value !== 'ready'"
                   @select="exportPresentation('pdf')"
                 >
-                  <span class="grid size-9 shrink-0 place-items-center rounded-xl bg-[#eaf3ff] text-accent"><FileDown :size="18" /></span>
-                  <span><strong class="block text-[13px] font-semibold">PDF document</strong><small class="mt-0.5 block text-[11px] text-[#777f8d]">Best for sharing and printing</small></span>
+                  <span
+                    class="grid size-9 shrink-0 place-items-center rounded-xl bg-[#eaf3ff] text-accent"
+                    ><FileDown :size="18"
+                  /></span>
+                  <span
+                    ><strong class="block text-[13px] font-semibold"
+                      >PDF document</strong
+                    ><small class="mt-0.5 block text-[11px] text-[#777f8d]"
+                      >Best for sharing and printing</small
+                    ></span
+                  >
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   class="group flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 outline-none select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-40 data-[highlighted]:bg-[#eef6ff]"
                   :disabled="preview.status.value !== 'ready'"
                   @select="exportPresentation('pptx')"
                 >
-                  <span class="grid size-9 shrink-0 place-items-center rounded-xl bg-[#fff1e8] text-[#dc5a1f]"><Presentation :size="18" /></span>
-                  <span><strong class="block text-[13px] font-semibold">PowerPoint</strong><small class="mt-0.5 block text-[11px] text-[#777f8d]">Open in PowerPoint or Keynote</small></span>
+                  <span
+                    class="grid size-9 shrink-0 place-items-center rounded-xl bg-[#fff1e8] text-[#dc5a1f]"
+                    ><Presentation :size="18"
+                  /></span>
+                  <span
+                    ><strong class="block text-[13px] font-semibold"
+                      >PowerPoint</strong
+                    ><small class="mt-0.5 block text-[11px] text-[#777f8d]"
+                      >Open in PowerPoint or Keynote</small
+                    ></span
+                  >
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   class="group flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 outline-none select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-40 data-[highlighted]:bg-[#eef6ff]"
                   :disabled="preview.status.value !== 'ready'"
                   @select="exportPresentation('png')"
                 >
-                  <span class="grid size-9 shrink-0 place-items-center rounded-xl bg-[#edf8f3] text-[#21835f]"><Images :size="18" /></span>
-                  <span><strong class="block text-[13px] font-semibold">PNG images</strong><small class="mt-0.5 block text-[11px] text-[#777f8d]">One image per slide, in a ZIP</small></span>
+                  <span
+                    class="grid size-9 shrink-0 place-items-center rounded-xl bg-[#edf8f3] text-[#21835f]"
+                    ><Images :size="18"
+                  /></span>
+                  <span
+                    ><strong class="block text-[13px] font-semibold"
+                      >PNG images</strong
+                    ><small class="mt-0.5 block text-[11px] text-[#777f8d]"
+                      >One image per slide, in a ZIP</small
+                    ></span
+                  >
                 </DropdownMenuItem>
                 <DropdownMenuSeparator class="mx-2 my-1 h-px bg-black/7" />
                 <DropdownMenuItem
                   class="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 outline-none select-none data-[highlighted]:bg-[#f3f5f8]"
                   @select="downloadMarkdown"
                 >
-                  <span class="grid size-9 shrink-0 place-items-center rounded-xl bg-[#f1f3f6] text-[#596171]"><FileText :size="18" /></span>
-                  <span><strong class="block text-[13px] font-semibold">Markdown</strong><small class="mt-0.5 block text-[11px] text-[#777f8d]">Just the presentation content</small></span>
+                  <span
+                    class="grid size-9 shrink-0 place-items-center rounded-xl bg-[#f1f3f6] text-[#596171]"
+                    ><FileText :size="18"
+                  /></span>
+                  <span
+                    ><strong class="block text-[13px] font-semibold"
+                      >Markdown</strong
+                    ><small class="mt-0.5 block text-[11px] text-[#777f8d]"
+                      >Just the presentation content</small
+                    ></span
+                  >
                 </DropdownMenuItem>
-                <DropdownMenuLabel class="px-3 pt-2 pb-1 text-[10px] font-semibold tracking-[.08em] text-[#a0a6b1] uppercase">Advanced</DropdownMenuLabel>
+                <DropdownMenuLabel
+                  class="px-3 pt-2 pb-1 text-[10px] font-semibold tracking-[.08em] text-[#a0a6b1] uppercase"
+                  >Advanced</DropdownMenuLabel
+                >
                 <DropdownMenuItem
                   class="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 outline-none select-none data-[highlighted]:bg-[#f3f5f8]"
                   @select="downloadProject"
                 >
-                  <span class="grid size-9 shrink-0 place-items-center rounded-xl bg-[#f1f3f6] text-[#596171]"><FileArchive :size="18" /></span>
-                  <span><strong class="block text-[13px] font-semibold">Slidev project</strong><small class="mt-0.5 block text-[11px] text-[#777f8d]">Source files for developers</small></span>
+                  <span
+                    class="grid size-9 shrink-0 place-items-center rounded-xl bg-[#f1f3f6] text-[#596171]"
+                    ><FileArchive :size="18"
+                  /></span>
+                  <span
+                    ><strong class="block text-[13px] font-semibold"
+                      >Slidev project</strong
+                    ><small class="mt-0.5 block text-[11px] text-[#777f8d]"
+                      >Source files for developers</small
+                    ></span
+                  >
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenuPortal>
@@ -813,190 +860,146 @@ function resetPdf() {
             <SplitterPanel
               :default-size="42"
               :min-size="28"
-              class="min-w-0 pr-2 pl-6 pt-6 pb-6"
+              class="min-w-148 pr-2 pl-6 pt-6 pb-6"
             >
               <section
                 class="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[22px] border border-[#e1e5eb] bg-white shadow-lg"
               >
+                <ThemeStudio
+                  v-model:variant="config.variant"
+                  v-model:accent="config.accent"
+                  v-model:atmosphere="config.atmosphere"
+                />
                 <TabsRoot
-                  v-model="leftPanelView"
-                  class="flex h-full min-h-0 flex-col"
+                  v-model="editorTab"
+                  class="flex min-h-0 flex-1 flex-col"
                 >
                   <div
-                    class="flex h-14 shrink-0 items-center justify-between border-b border-[#e9ecf0] px-4"
+                    class="flex h-16 shrink-0 items-center justify-between border-b border-[#e9ecf0] px-5"
                   >
-                    <span class="text-[12px] font-semibold text-[#59616d]"
-                      >Workspace</span
-                    >
-                    <TabsList
-                      class="flex h-9 gap-1 rounded-xl bg-[#f1f3f6] p-1"
-                    >
-                      <TabsTrigger
-                        value="write"
+                    <div>
+                      <h2 class="text-[15px] font-semibold text-[#252a33]">
+                        Edit your presentation
+                      </h2>
+                      <p class="mt-0.5 text-[11px] text-[#929aa7]">
+                        Change the wording, structure, or formatting
+                      </p>
+                    </div>
+                    <TabsList class="flex h-9 gap-1 rounded-xl bg-[#f1f3f6] p-1"
+                      ><TabsTrigger
                         class="flex cursor-pointer items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium text-[#78818d] data-[state=active]:bg-white data-[state=active]:text-[#252a33] data-[state=active]:shadow-sm"
-                        ><Code2 :size="14" />Write</TabsTrigger
-                      >
-                      <TabsTrigger
-                        value="design"
-                        class="flex cursor-pointer items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium text-[#78818d] data-[state=active]:bg-white data-[state=active]:text-[#252a33] data-[state=active]:shadow-sm"
-                        ><Palette :size="14" />Design</TabsTrigger
-                      >
-                    </TabsList>
-                  </div>
-                  <TabsContent value="write" class="min-h-0 flex-1">
-                    <TabsRoot
-                      v-model="editorTab"
-                      class="flex h-full min-h-0 flex-col"
-                    >
-                      <div
-                        class="flex h-16 shrink-0 items-center justify-between border-b border-[#e9ecf0] px-5"
-                      >
-                        <div>
-                          <h2 class="text-[15px] font-semibold text-[#252a33]">
-                            Edit your presentation
-                          </h2>
-                          <p class="mt-0.5 text-[11px] text-[#929aa7]">
-                            Change the wording, structure, or formatting
-                          </p>
-                        </div>
-                        <TabsList
-                          class="flex h-9 gap-1 rounded-xl bg-[#f1f3f6] p-1"
-                          ><TabsTrigger
-                            class="flex cursor-pointer items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium text-[#78818d] data-[state=active]:bg-white data-[state=active]:text-[#252a33] data-[state=active]:shadow-sm"
-                            value="outline"
-                            ><Layers3 :size="15" />Outline
-                            <span class="text-[10px] text-[#9aa2ae]">{{
-                              outline.length
-                            }}</span></TabsTrigger
-                          ><TabsTrigger
-                            class="flex cursor-pointer items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium text-[#78818d] data-[state=active]:bg-white data-[state=active]:text-[#252a33] data-[state=active]:shadow-sm"
-                            value="slide"
-                            >Slide {{ selectedSlideIndex + 1 }}</TabsTrigger
-                          ><TabsTrigger
-                            class="flex cursor-pointer items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium text-[#78818d] data-[state=active]:bg-white data-[state=active]:text-[#252a33] data-[state=active]:shadow-sm"
-                            value="markdown"
-                            ><Code2 :size="15" />Full deck</TabsTrigger
-                          ></TabsList
-                        >
-                      </div>
-                      <TabsContent
-                        value="slide"
-                        class="flex min-h-0 flex-1 flex-col"
-                      >
-                        <div
-                          class="flex h-11 shrink-0 items-center justify-between border-b border-[#eef0f3] px-5 text-[11px] text-[#858e9b]"
-                        >
-                          <span>Slide {{ selectedSlideIndex + 1 }}</span>
-                          <strong class="truncate font-medium text-[#515966]">{{
-                            selectedSlide?.title
-                          }}</strong>
-                        </div>
-                        <textarea
-                          class="min-h-0 w-full flex-1 resize-none border-0 bg-white px-6 py-5 font-mono text-[13px] leading-[1.8] text-[#434a55] caret-accent outline-0"
-                          :value="selectedSlide?.content || ''"
-                          spellcheck="false"
-                          :aria-label="`Markdown for slide ${selectedSlideIndex + 1}`"
-                          @input="onSlideMarkdownInput"
-                        ></textarea>
-                      </TabsContent>
-                      <TabsContent value="markdown" class="min-h-0 flex-1">
-                        <textarea
-                          class="size-full resize-none border-0 bg-white px-6 py-5 font-mono text-[13px] leading-[1.8] text-[#434a55] caret-accent outline-0"
-                          :value="markdown"
-                          spellcheck="false"
-                          aria-label="Presentation content editor"
-                          @input="onMarkdownInput"
-                        ></textarea>
-                      </TabsContent>
-                      <TabsContent
                         value="outline"
-                        class="min-h-0 flex-1 overflow-y-auto p-4"
-                        ><button
-                          v-for="item in outline"
-                          :key="item.index"
-                          class="grid min-h-[58px] w-full cursor-pointer grid-cols-[40px_1fr_auto] items-center gap-2 rounded-xl px-3 text-left transition-[transform,background-color] duration-150 ease-snappy hover:bg-[#f5f7f9] active:scale-[.99] motion-reduce:transition-none"
-                          :class="{
-                            'bg-[#eef6ff]': selectedSlideIndex === item.index,
-                          }"
-                          @click="openSlide(item.index)"
+                        ><Layers3 :size="15" />Outline
+                        <span class="text-[10px] text-[#9aa2ae]">{{
+                          outline.length
+                        }}</span></TabsTrigger
+                      ><TabsTrigger
+                        class="flex cursor-pointer items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium text-[#78818d] data-[state=active]:bg-white data-[state=active]:text-[#252a33] data-[state=active]:shadow-sm"
+                        value="slide"
+                        >Slide {{ selectedSlideIndex + 1 }}</TabsTrigger
+                      ><TabsTrigger
+                        class="flex cursor-pointer items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium text-[#78818d] data-[state=active]:bg-white data-[state=active]:text-[#252a33] data-[state=active]:shadow-sm"
+                        value="markdown"
+                        ><Code2 :size="15" />Full deck</TabsTrigger
+                      ></TabsList
+                    >
+                  </div>
+                  <TabsContent
+                    value="slide"
+                    class="flex min-h-0 flex-1 flex-col"
+                  >
+                    <div
+                      class="flex h-11 shrink-0 items-center justify-between border-b border-[#eef0f3] px-5 text-[11px] text-[#858e9b]"
+                    >
+                      <span>Slide {{ selectedSlideIndex + 1 }}</span>
+                      <strong class="truncate font-medium text-[#515966]">{{
+                        selectedSlide?.title
+                      }}</strong>
+                    </div>
+                    <textarea
+                      class="min-h-0 w-full flex-1 resize-none border-0 bg-white px-6 py-5 font-mono text-[13px] leading-[1.8] text-[#434a55] caret-accent outline-0"
+                      :value="selectedSlide?.content || ''"
+                      spellcheck="false"
+                      :aria-label="`Markdown for slide ${selectedSlideIndex + 1}`"
+                      @input="onSlideMarkdownInput"
+                    ></textarea>
+                  </TabsContent>
+                  <TabsContent value="markdown" class="min-h-0 flex-1">
+                    <textarea
+                      class="size-full resize-none border-0 bg-white px-6 py-5 font-mono text-[13px] leading-[1.8] text-[#434a55] caret-accent outline-0"
+                      :value="markdown"
+                      spellcheck="false"
+                      aria-label="Presentation content editor"
+                      @input="onMarkdownInput"
+                    ></textarea>
+                  </TabsContent>
+                  <TabsContent
+                    value="outline"
+                    class="min-h-0 flex-1 overflow-y-auto p-4"
+                    ><button
+                      v-for="item in outline"
+                      :key="item.index"
+                      class="grid min-h-[58px] w-full cursor-pointer grid-cols-[40px_1fr_auto] items-center gap-2 rounded-xl px-3 text-left transition-[transform,background-color] duration-150 ease-snappy hover:bg-[#f5f7f9] active:scale-[.99] motion-reduce:transition-none"
+                      :class="{
+                        'bg-[#eef6ff]': selectedSlideIndex === item.index,
+                      }"
+                      @click="openSlide(item.index)"
+                    >
+                      <span class="text-[11px] text-[#9aa2ae]">{{
+                        String(item.index + 1).padStart(2, "0")
+                      }}</span
+                      ><strong class="text-[13px] font-medium text-[#444b56]">{{
+                        item.title
+                      }}</strong
+                      ><ArrowRight class="text-[#a1a8b3]" :size="15" /></button
+                  ></TabsContent>
+                  <footer
+                    class="shrink-0 border-t border-[#e9ecf0] bg-[#fbfcfd] p-3.5"
+                  >
+                    <div
+                      v-if="error"
+                      class="mb-3 flex items-start gap-2 rounded-xl border border-[#f0c9ce] bg-[#fff6f7] px-3 py-2.5 text-[11px] leading-relaxed text-[#a94b57]"
+                    >
+                      <CircleAlert class="mt-0.5 shrink-0" :size="14" />{{
+                        error
+                      }}
+                    </div>
+                    <div class="flex flex-wrap items-end justify-between gap-3">
+                      <label
+                        class="grid min-w-[145px] flex-1 gap-1.5 text-[11px] font-medium text-[#69717d]"
+                        >Voice<span class="relative"
+                          ><select
+                            v-model="config.tone"
+                            class="h-10 w-full appearance-none rounded-xl border border-[#dfe3e9] bg-white px-3 pr-8 text-[12px] font-normal text-[#252a33]"
+                          >
+                            <option value="executive">Professional</option>
+                            <option value="educational">Teaching</option>
+                            <option value="persuasive">Persuasive</option>
+                            <option value="conversational">
+                              Friendly
+                            </option></select
+                          ><ChevronDown
+                            class="pointer-events-none absolute top-3 right-2.5 text-[#9aa2ae]"
+                            :size="14" /></span
+                      ></label>
+                      <div class="ml-auto text-right">
+                        <button
+                          class="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-accent px-4 text-[12px] font-semibold text-white shadow-[0_7px_18px_rgba(15,124,255,.22)] transition-transform duration-150 ease-snappy active:scale-[.97] disabled:cursor-not-allowed disabled:opacity-50"
+                          type="button"
+                          :disabled="status === 'generating'"
+                          @click="rewriteDeck"
                         >
-                          <span class="text-[11px] text-[#9aa2ae]">{{
-                            String(item.index + 1).padStart(2, "0")
-                          }}</span
-                          ><strong
-                            class="text-[13px] font-medium text-[#444b56]"
-                            >{{ item.title }}</strong
-                          ><ArrowRight
-                            class="text-[#a1a8b3]"
+                          <LoaderCircle
+                            v-if="status === 'generating'"
+                            class="animate-spin motion-reduce:animate-none"
                             :size="15"
-                          /></button
-                      ></TabsContent>
-                      <footer
-                        class="shrink-0 border-t border-[#e9ecf0] bg-[#fbfcfd] p-3.5"
-                      >
-                        <div
-                          v-if="error"
-                          class="mb-3 flex items-start gap-2 rounded-xl border border-[#f0c9ce] bg-[#fff6f7] px-3 py-2.5 text-[11px] leading-relaxed text-[#a94b57]"
-                        >
-                          <CircleAlert class="mt-0.5 shrink-0" :size="14" />{{
-                            error
+                          /><WandSparkles v-else :size="15" />{{
+                            status === "generating" ? "Rewriting…" : "Rewrite"
                           }}
-                        </div>
-                        <div
-                          class="flex flex-wrap items-end justify-between gap-3"
-                        >
-                          <label
-                            class="grid min-w-[145px] flex-1 gap-1.5 text-[11px] font-medium text-[#69717d]"
-                            >Voice<span class="relative"
-                              ><select
-                                v-model="config.tone"
-                                class="h-10 w-full appearance-none rounded-xl border border-[#dfe3e9] bg-white px-3 pr-8 text-[12px] font-normal text-[#252a33]"
-                              >
-                                <option value="executive">Professional</option>
-                                <option value="educational">Teaching</option>
-                                <option value="persuasive">Persuasive</option>
-                                <option value="conversational">
-                                  Friendly
-                                </option></select
-                              ><ChevronDown
-                                class="pointer-events-none absolute top-3 right-2.5 text-[#9aa2ae]"
-                                :size="14" /></span
-                          ></label>
-                          <div class="ml-auto text-right">
-                            <small
-                              class="mb-1.5 block text-[10px] text-[#929aa7]"
-                              >Rewrites from the original PDF</small
-                            >
-                            <button
-                              class="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-accent px-4 text-[12px] font-semibold text-white shadow-[0_7px_18px_rgba(15,124,255,.22)] transition-transform duration-150 ease-snappy active:scale-[.97] disabled:cursor-not-allowed disabled:opacity-50"
-                              type="button"
-                              :disabled="status === 'generating'"
-                              @click="rewriteDeck"
-                            >
-                              <LoaderCircle
-                                v-if="status === 'generating'"
-                                class="animate-spin motion-reduce:animate-none"
-                                :size="15"
-                              /><WandSparkles v-else :size="15" />{{
-                                status === "generating"
-                                  ? "Rewriting…"
-                                  : "Rewrite"
-                              }}
-                            </button>
-                          </div>
-                        </div>
-                      </footer>
-                    </TabsRoot>
-                  </TabsContent>
-                  <TabsContent value="design" class="min-h-0 flex-1">
-                    <ThemeStudio
-                      v-model:variant="config.variant"
-                      v-model:accent="config.accent"
-                      v-model:atmosphere="config.atmosphere"
-                      v-model:logo="config.logo"
-                      v-model:logo-invert="config.logoInvert"
-                    />
-                  </TabsContent>
+                        </button>
+                      </div>
+                    </div>
+                  </footer>
                 </TabsRoot>
               </section>
             </SplitterPanel>
