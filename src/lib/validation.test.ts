@@ -41,4 +41,10 @@ describe('AI JSON validation', () => {
     const result = parseGeneratedDeck('{"title":"Demo","slides":[{"title":"Opening","body":"A point"}]}')
     expect(result.slides[0]?.body).toEqual(['A point'])
   })
+
+  it('accepts only PDF image identifiers supplied with the generation request', () => {
+    const output = '{"title":"Demo","slides":[{"title":"Chart","body":["Growth"],"build":"none","image":"pdf-p2-chart.webp","imageAlt":"Growth chart"}]}'
+    expect(parseGeneratedDeck(output, undefined, ['pdf-p2-chart.webp']).slides[0]?.image).toBe('pdf-p2-chart.webp')
+    expect(() => parseGeneratedDeck(output, undefined, ['different.webp'])).toThrow(/unknown PDF image/)
+  })
 })

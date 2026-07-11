@@ -65,6 +65,23 @@ describe('Slidev markdown generation', () => {
     expect(markdown).toContain('# Static\n\n- One\n- Two')
   })
 
+  it('places a selected PDF image beside the slide content', () => {
+    const markdown = generateMarkdown({
+      ...deck,
+      slides: [{
+        title: 'Visual evidence',
+        body: ['A finding'],
+        build: 'none',
+        image: 'pdf-p2-chart.webp',
+        imageAlt: 'A chart showing quarterly growth',
+      }],
+    }, config)
+    expect(markdown).toContain('class="decksmith-visual-slide"')
+    expect(markdown).toContain(`:src="'/assets/pdf-p2-chart.webp'"`)
+    expect(markdown).not.toContain('<img src="/assets/')
+    expect(markdown).toContain('alt="A chart showing quarterly growth"')
+  })
+
   it('updates deck config without discarding edited slide content', () => {
     const edited = `${generateMarkdown(deck, config)}\nCustom ending`
     const updated = updateMarkdownHeadmatter(edited, {

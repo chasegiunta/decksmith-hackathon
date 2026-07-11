@@ -26,7 +26,17 @@ describe('generation function', () => {
     const request = {
       method: 'POST',
       body: {
-        pdf: { fileName: 'source.pdf', pages: [{ pageNumber: 1, text: 'Useful source material.' }] },
+        pdf: {
+          fileName: 'source.pdf',
+          pages: [{ pageNumber: 1, text: 'Useful source material.' }],
+          images: [{
+            id: 'pdf-p1-chart.webp',
+            pageNumber: 1,
+            width: 900,
+            height: 500,
+            previewDataUrl: 'data:image/webp;base64,AAAA',
+          }],
+        },
         config: { title: 'Demo', density: 'balanced', tone: 'executive' },
       },
     } as VercelRequest
@@ -34,10 +44,17 @@ describe('generation function', () => {
     await handler(request, response)
 
     const [, options] = fetchMock.mock.calls[0] as [string, RequestInit]
-    const upstreamBody = JSON.parse(String(options.body)) as { tools?: Array<{ function?: { name?: string; parameters?: unknown } }>; tool_choice?: { function?: { name?: string } } }
+    const upstreamBody = JSON.parse(String(options.body)) as {
+      tools?: Array<{ function?: { name?: string; parameters?: unknown } }>
+      tool_choice?: { function?: { name?: string } }
+      messages?: Array<{ content?: unknown }>
+    }
     expect(upstreamBody.tools?.[0]?.function?.name).toBe('submit_deck')
     expect(upstreamBody.tool_choice?.function?.name).toBe('submit_deck')
     expect(JSON.stringify(upstreamBody.tools?.[0]?.function?.parameters)).toContain('sequential')
+    expect(JSON.stringify(upstreamBody.tools?.[0]?.function?.parameters)).toContain('imageAlt')
+    expect(JSON.stringify(upstreamBody.tools?.[0]?.function?.parameters)).toContain('pdf-p1-chart.webp')
+    expect(JSON.stringify(upstreamBody.messages?.[1]?.content)).toContain('data:image/webp;base64,AAAA')
     expect(String(options.body)).not.toContain('speakerNotes')
     expect(String(options.body)).not.toContain('sourcePages')
     expect(response.status).toHaveBeenCalledWith(200)

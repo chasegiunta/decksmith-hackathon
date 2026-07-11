@@ -33,6 +33,9 @@ const slideStyles = `
 .slidev-layout.l-cover h1:not(.fs-cover) { max-width: var(--mw-lead); margin: var(--sp-6) 0 var(--sp-3); color: var(--fg-dim); font-size: var(--fs-lead); line-height: 1.15; }
 .slidev-layout.l-topic .l-body { font-size: var(--fs-body); }
 .slidev-layout.l-topic .l-body h1 { max-width: var(--mw-title); margin: 0 0 var(--sp-6); font-size: var(--fs-h2); line-height: 1.06; }
+.decksmith-visual-slide { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); align-items: center; gap: clamp(1.5rem, 4vw, 3rem); min-height: 58%; }
+.decksmith-visual-copy { min-width: 0; }
+.decksmith-visual-slide > img { width: 100%; max-height: 56vh; object-fit: contain; border-radius: 1rem; box-shadow: 0 18px 45px rgba(10, 24, 48, .16); }
 html.decksmith-embedded-preview #page-root nav { display: none !important; }
 `.trim()
 
@@ -73,8 +76,12 @@ export function createProjectFiles(
   config: DeckConfig,
   assets: Record<string, Uint8Array> = {},
 ): ProjectFiles {
+  const normalizedMarkdown = markdown.replace(
+    /<img src="\/assets\/([a-z0-9][a-z0-9._-]*)"/g,
+    `<img :src="'/assets/$1'"`,
+  )
   const files: ProjectFiles = {
-    'slides.md': markdown,
+    'slides.md': normalizedMarkdown,
     'package.json': JSON.stringify(
       {
         name: 'generated-slidev-deck',

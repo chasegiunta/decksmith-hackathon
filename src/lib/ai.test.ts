@@ -17,6 +17,14 @@ const pdf: ExtractedPdf = {
   fileName: 'source.pdf',
   pageCount: 1,
   pages: [{ pageNumber: 1, text: 'Useful source material for the presentation.', characterCount: 44 }],
+  images: [{
+    id: 'pdf-p1-chart.webp',
+    pageNumber: 1,
+    width: 900,
+    height: 500,
+    data: new Uint8Array([1, 2, 3]),
+    previewDataUrl: 'data:image/webp;base64,AAAA',
+  }],
 }
 
 afterEach(() => vi.unstubAllGlobals())
@@ -24,17 +32,19 @@ afterEach(() => vi.unstubAllGlobals())
 describe('hosted AI provider', () => {
   it('uses the same-origin generation function without browser credentials', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
-      output: '{"slides":[{"title":"Opening","body":["A clear point"],"build":"none"}]}',
+      output: '{"slides":[{"title":"Opening","body":["A clear point"],"build":"none","image":"pdf-p1-chart.webp","imageAlt":"A chart"}]}',
     }), { status: 200, headers: { 'content-type': 'application/json' } }))
     vi.stubGlobal('fetch', fetchMock)
 
     const result = await new HostedAiProvider().generateDeck({ pdf, config })
     expect(result.title).toBe('A useful deck')
     expect(result.slides[0]?.title).toBe('Opening')
+    expect(result.slides[0]?.image).toBe('pdf-p1-chart.webp')
     expect(fetchMock).toHaveBeenCalledOnce()
     const [url, options] = fetchMock.mock.calls[0] as [string, RequestInit]
     expect(url).toBe('/api/generate')
     expect(options.headers).toEqual({ 'content-type': 'application/json' })
     expect(JSON.stringify(options.body)).not.toContain('apiKey')
+    expect(String(options.body)).not.toContain('"data":{"0":1')
   })
 })

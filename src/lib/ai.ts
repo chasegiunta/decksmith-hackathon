@@ -20,6 +20,13 @@ export class HostedAiProvider implements AiProvider {
         pdf: {
           fileName: input.pdf.fileName,
           pages: input.pdf.pages.map(({ pageNumber, text }) => ({ pageNumber, text })),
+          images: input.pdf.images.map(({ id, pageNumber, width, height, previewDataUrl }) => ({
+            id,
+            pageNumber,
+            width,
+            height,
+            previewDataUrl,
+          })),
         },
       }),
     })
@@ -32,6 +39,6 @@ export class HostedAiProvider implements AiProvider {
     }
     if (!payload?.output) throw new Error('The presentation service returned an empty response. Try again.')
     const fallbackTitle = input.config.title || input.pdf.fileName.replace(/\.pdf$/i, '')
-    return parseGeneratedDeck(payload.output, fallbackTitle)
+    return parseGeneratedDeck(payload.output, fallbackTitle, input.pdf.images.map(({ id }) => id))
   }
 }

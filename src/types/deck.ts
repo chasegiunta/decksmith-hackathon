@@ -34,10 +34,20 @@ export interface SourcePage {
   characterCount: number
 }
 
+export interface ExtractedPdfImage {
+  id: string
+  pageNumber: number
+  width: number
+  height: number
+  data: Uint8Array
+  previewDataUrl: string
+}
+
 export interface ExtractedPdf {
   fileName: string
   pageCount: number
   pages: SourcePage[]
+  images: ExtractedPdfImage[]
   coverPng?: Uint8Array
 }
 
@@ -45,6 +55,8 @@ export interface GeneratedSlide {
   title: string
   body: string[]
   build: SlideBuild
+  image?: string | null
+  imageAlt?: string | null
 }
 
 export interface GeneratedDeck {

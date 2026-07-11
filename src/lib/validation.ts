@@ -5,6 +5,8 @@ const slideSchema = z.object({
   title: z.string().trim().min(1).max(140),
   body: z.array(z.string().trim().min(1).max(800)).min(1).max(12),
   build: z.enum(['none', 'sequential', 'pairs']).default('none'),
+  image: z.string().trim().regex(/^[a-z0-9][a-z0-9._-]*$/).nullable().optional(),
+  imageAlt: z.string().trim().max(240).nullable().optional(),
 })
 
 export const generatedDeckSchema = z.object({
@@ -82,7 +84,7 @@ function normalizeGeneratedDeck(value: unknown, fallbackTitle?: string): unknown
   return { ...deck, title, slides }
 }
 
-export function parseGeneratedDeck(raw: string, fallbackTitle?: string): GeneratedDeck {
+export function parseGeneratedDeck(raw: string, fallbackTitle?: string, validImageIds?: string[]): GeneratedDeck {
   let value: unknown
   try {
     value = JSON.parse(extractJson(raw))
@@ -96,6 +98,13 @@ export function parseGeneratedDeck(raw: string, fallbackTitle?: string): Generat
     const issue = result.error.issues[0]
     const location = issue?.path.join('.') || 'response'
     throw new ModelOutputError(`The AI response failed validation at ${location}: ${issue?.message ?? 'invalid value'}`)
+  }
+  if (validImageIds) {
+    const allowedImages = new Set(validImageIds)
+    const invalidIndex = result.data.slides.findIndex((slide) => slide.image && !allowedImages.has(slide.image))
+    if (invalidIndex >= 0) {
+      throw new ModelOutputError(`The AI response failed validation at slides.${invalidIndex}.image: unknown PDF image`)
+    }
   }
   return result.data
 }

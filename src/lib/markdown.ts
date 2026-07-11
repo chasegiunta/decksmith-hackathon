@@ -8,6 +8,10 @@ function escapeSlideSeparators(value: string): string {
   return value.replace(/(^|\n)(\s*)---(?=\s*(?:\n|$))/g, '$1$2\\---')
 }
 
+function escapeHtmlAttribute(value: string): string {
+  return value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+}
+
 export function buildHeadmatter(config: DeckConfig): string {
   const lines = [
     '---',
@@ -36,10 +40,24 @@ export function buildHeadmatter(config: DeckConfig): string {
 
 function slideToMarkdown(slide: GeneratedSlide): string {
   const lines = [`# ${escapeSlideSeparators(slide.title)}`, '']
+  const bodyLines: string[] = []
   const usesBuild = slide.build !== 'none' && slide.body.length > 1
-  if (usesBuild) lines.push(slide.build === 'pairs' ? '<v-clicks every="2">' : '<v-clicks>', '')
-  for (const point of slide.body) lines.push(`- ${escapeSlideSeparators(point)}`)
-  if (usesBuild) lines.push('', '</v-clicks>')
+  if (usesBuild) bodyLines.push(slide.build === 'pairs' ? '<v-clicks every="2">' : '<v-clicks>', '')
+  for (const point of slide.body) bodyLines.push(`- ${escapeSlideSeparators(point)}`)
+  if (usesBuild) bodyLines.push('', '</v-clicks>')
+
+  if (slide.image && /^[a-z0-9][a-z0-9._-]*$/.test(slide.image)) {
+    lines.push(
+      '<div class="decksmith-visual-slide">',
+      '<div class="decksmith-visual-copy">',
+      ...bodyLines,
+      '</div>',
+      `<img :src="'/assets/${slide.image}'" alt="${escapeHtmlAttribute(slide.imageAlt || slide.title)}" />`,
+      '</div>',
+    )
+  } else {
+    lines.push(...bodyLines)
+  }
 
   return lines.join('\n').trim()
 }
@@ -102,4 +120,4 @@ export function parseOutline(markdown: string): OutlineItem[] {
   return parseSlideSections(markdown).map(({ index, title }) => ({ index, title }))
 }
 
-export const markdownInternals = { escapeSlideSeparators }
+export const markdownInternals = { escapeHtmlAttribute, escapeSlideSeparators }

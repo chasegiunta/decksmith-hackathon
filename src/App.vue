@@ -179,6 +179,7 @@ const assets = computed<Record<string, Uint8Array>>(() => {
   const result: Record<string, Uint8Array> = {};
   const cover = pdf.value?.coverPng;
   if (cover) result["source-cover.png"] = cover;
+  for (const image of pdf.value?.images ?? []) result[image.id] = image.data;
   return result;
 });
 const projectFiles = computed(() =>
@@ -707,9 +708,13 @@ function resetPdf() {
                     >
                       {{ pdf.fileName }}
                     </strong>
-                    <span class="mt-1 text-[13px] text-[#7c8592]"
-                      >{{ pdf.pageCount }} pages · Ready to create</span
-                    >
+                    <span class="mt-1 text-[13px] text-[#7c8592]">
+                      {{ pdf.pageCount }} pages<span v-if="pdf.images.length">
+                        · {{ pdf.images.length }} usable
+                        {{ pdf.images.length === 1 ? "image" : "images" }}</span
+                      >
+                      · Ready to create
+                    </span>
                     <small
                       class="mt-3 text-[11px] font-medium text-accent shrink-0"
                       >Choose a different PDF</small

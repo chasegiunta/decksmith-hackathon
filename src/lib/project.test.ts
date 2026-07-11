@@ -31,6 +31,7 @@ describe('Slidev project generation', () => {
     expect(files['global-top.vue']).toContain("message.type === 'decksmith:fullscreen'")
     expect(files['styles/index.css']).toContain('html.decksmith-embedded-preview #page-root nav')
     expect(files['styles/index.css']).toContain('.slidev-layout.l-topic .l-body h1')
+    expect(files['styles/index.css']).toContain('.decksmith-visual-slide')
     expect(files['styles/index.css']).toContain('min(var(--fs-cover), 4.5rem)')
     expect(files['styles/index.css']).toContain("@fontsource/fraunces/latin-600.css")
     expect(files['package.json']).toContain('slidev-theme-tahta')
@@ -53,5 +54,10 @@ describe('Slidev project generation', () => {
       ]),
     )
     expect(await zip.file('slides.md')?.async('string')).toBe('# Hello')
+  })
+
+  it('repairs legacy static public asset URLs before preview or export', () => {
+    const files = createProjectFiles('<img src="/assets/chart.webp" alt="Chart" />', config)
+    expect(files['slides.md']).toBe(`<img :src="'/assets/chart.webp'" alt="Chart" />`)
   })
 })
