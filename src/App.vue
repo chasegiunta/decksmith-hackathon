@@ -36,7 +36,6 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  CircleAlert,
   CloudUpload,
   Code2,
   FileArchive,
@@ -58,6 +57,10 @@ import {
 } from "@lucide/vue";
 import { HostedAiProvider } from "@/lib/ai";
 import ThemeStudio from "@/components/ThemeStudio.vue";
+import UiAlert from "@/components/ui/UiAlert.vue";
+import UiButton from "@/components/ui/UiButton.vue";
+import UiSegmentedControl from "@/components/ui/UiSegmentedControl.vue";
+import UiSelect from "@/components/ui/UiSelect.vue";
 import { createProjectZip, downloadBlob, slugify } from "@/lib/export";
 import {
   generateMarkdown,
@@ -78,6 +81,18 @@ type WorkStatus =
   | "generating"
   | "generated"
   | "error";
+
+const toneOptions = [
+  { value: "executive", label: "Professional" },
+  { value: "educational", label: "Teaching" },
+  { value: "persuasive", label: "Persuasive" },
+  { value: "conversational", label: "Friendly" },
+] as const;
+const densityOptions = [
+  { value: "airy", label: "Simple" },
+  { value: "balanced", label: "Balanced" },
+  { value: "dense", label: "Detailed" },
+] as const;
 
 const MarkdownEditor = defineAsyncComponent(
   () => import("@/components/MarkdownEditor.vue"),
@@ -442,8 +457,8 @@ function resetPdf() {
           ></span>
           <DropdownMenuRoot v-if="markdown">
             <DropdownMenuTrigger as-child>
-              <button
-                class="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-white px-4 text-[13px] font-semibold text-navy shadow-[0_6px_18px_rgba(0,0,0,.16)] transition-transform duration-150 ease-snappy active:scale-[.97] disabled:cursor-wait disabled:opacity-75 motion-reduce:transition-none"
+              <UiButton
+                variant="secondary"
                 :disabled="Boolean(exporting)"
               >
                 <LoaderCircle
@@ -454,7 +469,7 @@ function resetPdf() {
                 <FileDown v-else :size="16" />
                 {{ exporting ? "Exporting…" : "Export" }}
                 <ChevronDown v-if="!exporting" :size="14" />
-              </button>
+              </UiButton>
             </DropdownMenuTrigger>
             <DropdownMenuPortal>
               <DropdownMenuContent
@@ -665,57 +680,29 @@ function resetPdf() {
           <div class="mt-4 grid grid-cols-2 gap-4 max-[620px]:grid-cols-1">
             <label class="grid gap-2 text-[12px] font-medium text-[#5d6572]">
               Voice
-              <span class="relative">
-                <select
-                  v-model="config.tone"
-                  class="h-11 w-full appearance-none rounded-xl border border-[#dce1e8] bg-[#fbfcfd] px-3.5 pr-9 text-[13px] font-normal text-[#262b34]"
-                >
-                  <option value="executive">Professional</option>
-                  <option value="educational">Teaching</option>
-                  <option value="persuasive">Persuasive</option>
-                  <option value="conversational">Friendly</option>
-                </select>
-                <ChevronDown
-                  class="pointer-events-none absolute top-3.5 right-3 text-[#9aa2ae]"
-                  :size="15"
-                />
-              </span>
+              <UiSelect v-model="config.tone" :options="toneOptions" />
             </label>
             <div>
               <span class="text-[12px] font-medium text-[#5d6572]"
                 >Amount of detail</span
               >
-              <div class="mt-2 grid grid-cols-3 rounded-xl bg-[#f1f3f6] p-1">
-                <button
-                  v-for="option in [
-                    { value: 'airy', label: 'Simple' },
-                    { value: 'balanced', label: 'Balanced' },
-                    { value: 'dense', label: 'Detailed' },
-                  ]"
-                  :key="option.value"
-                  type="button"
-                  class="cursor-pointer rounded-lg px-2 py-2.5 text-[11px] font-medium text-[#7a8290] transition-[transform,background-color,color,box-shadow] duration-150 ease-snappy active:scale-[.97]"
-                  :class="{
-                    'bg-white text-[#252a33] shadow-sm':
-                      config.density === option.value,
-                  }"
-                  @click="
-                    config.density = option.value as DeckConfig['density']
-                  "
-                >
-                  {{ option.label }}
-                </button>
-              </div>
+              <UiSegmentedControl
+                v-model="config.density"
+                class="mt-2"
+                :options="densityOptions"
+                label="Amount of detail"
+              />
             </div>
           </div>
-          <div
+          <UiAlert
             v-if="error"
-            class="mt-4 flex items-start gap-2.5 rounded-xl border border-[#f0c9ce] bg-[#fff6f7] px-3.5 py-3 text-[12px] leading-relaxed text-[#a94b57]"
+            class="mt-4"
           >
-            <CircleAlert class="mt-0.5 shrink-0" :size="16" />{{ error }}
-          </div>
-          <button
-            class="mt-5 flex h-12 w-full cursor-pointer items-center justify-center gap-2.5 rounded-xl bg-accent px-5 text-[14px] font-semibold text-white shadow-[0_10px_24px_rgba(15,124,255,.24)] transition-transform duration-150 ease-snappy active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-45"
+            {{ error }}
+          </UiAlert>
+          <UiButton
+            size="lg"
+            class="mt-5 w-full"
             :disabled="!canGenerate"
             @click="generateDeck"
           >
@@ -735,7 +722,7 @@ function resetPdf() {
               class="ml-auto"
               :size="18"
             />
-          </button>
+          </UiButton>
         </article>
 
         <div
@@ -894,36 +881,24 @@ function resetPdf() {
                   <footer
                     class="shrink-0 border-t border-[#e9ecf0] bg-[#fbfcfd] p-3.5"
                   >
-                    <div
+                    <UiAlert
                       v-if="error"
-                      class="mb-3 flex items-start gap-2 rounded-xl border border-[#f0c9ce] bg-[#fff6f7] px-3 py-2.5 text-[11px] leading-relaxed text-[#a94b57]"
+                      class="mb-3"
+                      compact
                     >
-                      <CircleAlert class="mt-0.5 shrink-0" :size="14" />{{
-                        error
-                      }}
-                    </div>
+                      {{ error }}
+                    </UiAlert>
                     <div class="flex flex-wrap items-end justify-between gap-3">
                       <label
                         class="grid min-w-[145px] flex-1 gap-1.5 text-[11px] font-medium text-[#69717d]"
-                        >Voice<span class="relative"
-                          ><select
-                            v-model="config.tone"
-                            class="h-10 w-full appearance-none rounded-xl border border-[#dfe3e9] bg-white px-3 pr-8 text-[12px] font-normal text-[#252a33]"
-                          >
-                            <option value="executive">Professional</option>
-                            <option value="educational">Teaching</option>
-                            <option value="persuasive">Persuasive</option>
-                            <option value="conversational">
-                              Friendly
-                            </option></select
-                          ><ChevronDown
-                            class="pointer-events-none absolute top-3 right-2.5 text-[#9aa2ae]"
-                            :size="14" /></span
-                      ></label>
+                        >Voice<UiSelect
+                          v-model="config.tone"
+                          :options="toneOptions"
+                          size="sm"
+                          surface="plain"
+                      /></label>
                       <div class="ml-auto text-right">
-                        <button
-                          class="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-accent px-4 text-[12px] font-semibold text-white shadow-[0_7px_18px_rgba(15,124,255,.22)] transition-transform duration-150 ease-snappy active:scale-[.97] disabled:cursor-not-allowed disabled:opacity-50"
-                          type="button"
+                        <UiButton
                           :disabled="status === 'generating'"
                           @click="rewriteDeck"
                         >
@@ -934,7 +909,7 @@ function resetPdf() {
                           /><WandSparkles v-else :size="15" />{{
                             status === "generating" ? "Rewriting…" : "Rewrite"
                           }}
-                        </button>
+                        </UiButton>
                       </div>
                     </div>
                   </footer>
@@ -978,20 +953,21 @@ function resetPdf() {
                     </div>
                   </div>
                   <div class="flex items-center gap-2">
-                    <button
+                    <UiButton
                       v-if="preview.terminal.value.length"
-                      class="grid size-9 cursor-pointer place-items-center rounded-xl border border-[#dfe3e9] bg-white text-[#838b98] transition-transform duration-150 ease-snappy active:scale-[.95]"
+                      variant="icon"
+                      size="icon"
                       aria-label="Show troubleshooting details"
                       @click="showTerminal = !showTerminal"
                     >
-                      <TerminalSquare :size="16" /></button
-                    ><button
+                      <TerminalSquare :size="16" /></UiButton
+                    ><UiButton
                       v-if="preview.status.value === 'error'"
-                      class="inline-flex h-9 cursor-pointer items-center gap-2 rounded-xl bg-accent px-3.5 text-[12px] font-semibold text-white shadow-[0_7px_18px_rgba(15,124,255,.22)] transition-transform duration-150 ease-snappy active:scale-[.97]"
+                      size="sm"
                       @click="startPreview"
                     >
                       <RefreshCw :size="15" />Try again
-                    </button>
+                    </UiButton>
                   </div>
                 </div>
                 <div
@@ -1037,30 +1013,31 @@ function resetPdf() {
                       <div
                         class="flex items-center gap-1 rounded-xl bg-[#f2f4f7] p-1"
                       >
-                        <button
-                          class="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium transition-[transform,background-color,color,box-shadow] duration-150 ease-snappy hover:bg-white hover:text-[#252a33] hover:shadow-sm active:scale-[.96]"
-                          type="button"
+                        <UiButton
+                          variant="ghost"
+                          size="compact"
                           aria-label="Previous slide"
                           @click="sendPreviewCommand('previous')"
                         >
                           <ChevronLeft :size="16" />Previous
-                        </button>
+                        </UiButton>
                         <span
                           class="h-4 w-px bg-[#d9dee5]"
                           aria-hidden="true"
                         ></span>
-                        <button
-                          class="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium transition-[transform,background-color,color,box-shadow] duration-150 ease-snappy hover:bg-white hover:text-[#252a33] hover:shadow-sm active:scale-[.96]"
-                          type="button"
+                        <UiButton
+                          variant="ghost"
+                          size="compact"
                           aria-label="Next slide"
                           @click="sendPreviewCommand('next')"
                         >
                           Next<ChevronRight :size="16" />
-                        </button>
+                        </UiButton>
                       </div>
-                      <button
-                        class="inline-flex h-8 cursor-pointer items-center gap-2 rounded-lg px-2.5 text-[12px] font-medium transition-[transform,background-color,color] duration-150 ease-snappy hover:bg-[#f2f4f7] hover:text-[#252a33] active:scale-[.96]"
-                        type="button"
+                      <UiButton
+                        variant="ghost"
+                        size="compact"
+                        class="px-2.5"
                         :aria-label="
                           isPreviewFullscreen
                             ? 'Exit fullscreen'
@@ -1077,7 +1054,7 @@ function resetPdf() {
                             isPreviewFullscreen ? "Exit" : "Full screen"
                           }}</span
                         >
-                      </button>
+                      </UiButton>
                     </div>
                   </div>
                   <div
@@ -1104,13 +1081,12 @@ function resetPdf() {
                     >
                       {{ friendlyPreviewMessage }}
                     </p>
-                    <button
+                    <UiButton
                       v-if="preview.status.value === 'error'"
-                      class="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-accent px-4 text-[13px] font-semibold text-white shadow-[0_8px_20px_rgba(15,124,255,.24)] transition-transform duration-150 ease-snappy active:scale-[.97]"
                       @click="startPreview"
                     >
                       <RefreshCw :size="16" />Try preview again
-                    </button>
+                    </UiButton>
                     <div
                       v-else-if="isPreviewBusy"
                       class="mt-3 h-1 w-[170px] overflow-hidden rounded-full bg-[#e2e7ee]"

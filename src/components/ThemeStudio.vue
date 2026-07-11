@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { Check, ChevronDown, Palette } from "@lucide/vue";
+import { Check, Palette } from "@lucide/vue";
+import UiSelect from "@/components/ui/UiSelect.vue";
 import { accentPresets, atmosphereOptions, themeOptions } from "@/lib/themes";
 import type { DeckAtmosphere, TahtaVariant } from "@/types/deck";
 
@@ -69,24 +70,13 @@ const atmosphere = defineModel<DeckAtmosphere>("atmosphere", {
           class="grid w-29 shrink-0 snap-start content-between rounded-xl border border-[#e1e5eb] bg-[#fbfcfd] p-2.5 text-[10px] font-semibold tracking-[0.06em] text-[#747d8a] uppercase"
         >
           Background
-          <span class="relative">
-            <select
-              v-model="atmosphere"
-              class="h-8 w-full appearance-none rounded-lg border border-[#dce1e8] bg-white px-2 pr-6 text-[11px] font-medium tracking-normal text-[#343a44] normal-case outline-none focus:border-accent"
-            >
-              <option
-                v-for="option in atmosphereOptions"
-                :key="option.value"
-                :value="option.value"
-              >
-                {{ option.label }}
-              </option>
-            </select>
-            <ChevronDown
-              class="pointer-events-none absolute top-2 right-1.5 text-[#9aa2ae]"
-              :size="12"
-            />
-          </span>
+          <UiSelect
+            v-model="atmosphere"
+            :options="atmosphereOptions"
+            size="xs"
+            surface="plain"
+            aria-label="Background"
+          />
         </label>
 
         <button
