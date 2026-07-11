@@ -1,6 +1,33 @@
 import type { DeckConfig, ProjectFiles } from '@/types/deck'
 
 const slideStyles = `
+@import '@fontsource/fraunces/latin-400.css';
+@import '@fontsource/fraunces/latin-500.css';
+@import '@fontsource/fraunces/latin-600.css';
+@import '@fontsource/fraunces/latin-700.css';
+@import '@fontsource/fraunces/latin-600-italic.css';
+@import '@fontsource/hanken-grotesk/latin-400.css';
+@import '@fontsource/hanken-grotesk/latin-500.css';
+@import '@fontsource/hanken-grotesk/latin-600.css';
+@import '@fontsource/hanken-grotesk/latin-700.css';
+@import '@fontsource/hanken-grotesk/latin-800.css';
+@import '@fontsource/plus-jakarta-sans/latin-400.css';
+@import '@fontsource/plus-jakarta-sans/latin-500.css';
+@import '@fontsource/plus-jakarta-sans/latin-600.css';
+@import '@fontsource/plus-jakarta-sans/latin-700.css';
+@import '@fontsource/plus-jakarta-sans/latin-800.css';
+@import '@fontsource/archivo/latin-400.css';
+@import '@fontsource/archivo/latin-500.css';
+@import '@fontsource/archivo/latin-600.css';
+@import '@fontsource/archivo/latin-700.css';
+@import '@fontsource/archivo/latin-800.css';
+@import '@fontsource/space-mono/latin-400.css';
+@import '@fontsource/space-mono/latin-700.css';
+@import '@fontsource/jetbrains-mono/latin-400.css';
+@import '@fontsource/jetbrains-mono/latin-600.css';
+@import '@fontsource/jetbrains-mono/latin-700.css';
+@import '@fontsource/anton/latin-400.css';
+
 .source-ref { position: absolute; right: var(--pad-x, 2rem); bottom: 1.2rem; font-family: var(--font-mono); font-size: .56rem; color: var(--fg-dim); opacity: .72; }
 html.decksmith-embedded-preview #page-root nav { display: none !important; }
 `.trim()
@@ -51,6 +78,13 @@ export function createProjectFiles(
         type: 'module',
         scripts: { dev: 'slidev --bind 0.0.0.0', build: 'slidev build', export: 'slidev export' },
         dependencies: {
+          '@fontsource/anton': '^5.2.7',
+          '@fontsource/archivo': '^5.2.8',
+          '@fontsource/fraunces': '^5.2.9',
+          '@fontsource/hanken-grotesk': '^5.2.8',
+          '@fontsource/jetbrains-mono': '^5.2.8',
+          '@fontsource/plus-jakarta-sans': '^5.2.8',
+          '@fontsource/space-mono': '^5.2.9',
           '@slidev/cli': '^52.17.0',
           'playwright-chromium': '^1.61.1',
           'slidev-theme-tahta': '^0.13.2',

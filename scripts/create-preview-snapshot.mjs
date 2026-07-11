@@ -7,6 +7,13 @@ const packageJson = JSON.stringify({
   type: 'module',
   scripts: { dev: 'slidev --bind 0.0.0.0' },
   dependencies: {
+    '@fontsource/anton': '^5.2.7',
+    '@fontsource/archivo': '^5.2.8',
+    '@fontsource/fraunces': '^5.2.9',
+    '@fontsource/hanken-grotesk': '^5.2.8',
+    '@fontsource/jetbrains-mono': '^5.2.8',
+    '@fontsource/plus-jakarta-sans': '^5.2.8',
+    '@fontsource/space-mono': '^5.2.9',
     '@slidev/cli': '^52.17.0',
     'playwright-chromium': '^1.61.1',
     'slidev-theme-tahta': '^0.13.2',
@@ -30,7 +37,11 @@ try {
   await sandbox.writeFiles([
     { path: 'package.json', content: packageJson },
     { path: 'slides.md', content: '---\ntheme: slidev-theme-tahta\nthemeConfig:\n  variant: editorial\n---\n\n# Decksmith preview' },
-    { path: 'styles/index.css', content: '' },
+    { path: 'styles/index.css', content: `
+@import '@fontsource/fraunces/latin-600.css';
+@import '@fontsource/hanken-grotesk/latin-400.css';
+@import '@fontsource/jetbrains-mono/latin-400.css';
+` },
     { path: 'vite.config.ts', content: "import { defineConfig } from 'vite'\nexport default defineConfig({ server: { host: '0.0.0.0', allowedHosts: true } })\n" },
   ])
   const systemDependencies = await sandbox.runCommand({
