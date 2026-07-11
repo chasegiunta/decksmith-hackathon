@@ -20,9 +20,7 @@ const atmosphere = defineModel<DeckAtmosphere>("atmosphere", {
       >
         <Palette :size="14" />
       </span>
-      <strong class="text-[13px] font-semibold text-[#252a33]"
-        >Design your deck</strong
-      >
+      <h2 class="text-[13px] font-semibold text-[#252a33]">Design your deck</h2>
       <small class="text-[10px] text-[#929aa7]">Changes appear live</small>
     </div>
 

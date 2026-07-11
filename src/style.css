@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
 @theme {
+  --font-sans: "Inter Variable", Inter, sans-serif;
+  --font-display: "Epilogue Variable", Epilogue, sans-serif;
   --color-canvas: #f6f7f9;
   --color-ink: #171a21;
   --color-line: #e2e6ec;
@@ -14,7 +16,7 @@
   :root {
     color: #171a21;
     background: #f6f7f9;
-    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: var(--font-sans);
     font-optical-sizing: auto;
     font-synthesis: none;
     text-rendering: optimizeLegibility;
@@ -30,6 +32,16 @@
   body {
     min-width: 320px;
     overflow: hidden;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  .font-heading {
+    font-family: var(--font-display);
   }
 
   button,

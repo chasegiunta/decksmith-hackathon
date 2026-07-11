@@ -580,14 +580,14 @@ function resetPdf() {
         v-if="!pdf"
         class="upload-gradient flex min-h-full flex-col items-center px-6 py-12 text-center text-white max-[720px]:px-4"
       >
-        <div class="max-w-210">
+        <div class="max-w-240">
           <div
             class="mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[.07] px-4 py-2 text-[11px] font-semibold tracking-[0.12em] text-white/75 uppercase backdrop-blur-xl"
           >
             <Sparkles :size="15" />From document to deck, in minutes
           </div>
           <h1
-            class="text-[clamp(42px,5.5vw,72px)] leading-[1.02] font-normal tracking-[-0.052em] text-white"
+            class="text-[clamp(42px,5.5vw,72px)] leading-[1.02] font-[450] tracking-[-0.045em] text-white"
           >
             Your document has a story.<br /><span class="text-[#a9d8ff]"
               >Bring it to life.</span
@@ -1035,13 +1035,13 @@ function resetPdf() {
                     <span
                       class="grid size-9 place-items-center rounded-xl bg-[#eef6ff] text-accent"
                       ><Play :size="16" fill="currentColor" /></span
-                    ><span
-                      ><strong
-                        class="block text-[14px] font-semibold text-[#252a33]"
-                        >Presentation preview</strong
+                    ><div
+                      ><h2
+                        class="text-[14px] font-semibold text-[#252a33]"
+                        >Presentation preview</h2
                       ><small class="mt-0.5 block text-[11px] text-[#929aa7]"
                         >Your live preview starts automatically</small
-                      ></span
+                      ></div
                     >
                   </div>
                   <div class="flex items-center gap-2">
