@@ -31,6 +31,14 @@ import {
   TabsTrigger,
 } from "reka-ui";
 import {
+  AnimatePresence,
+  LazyMotion,
+  MotionConfig,
+  domAnimation,
+  m,
+  useReducedMotion,
+} from "motion-v";
+import {
   ArrowRight,
   Check,
   ChevronDown,
@@ -94,6 +102,31 @@ const densityOptions = [
   { value: "dense", label: "Detailed" },
 ] as const;
 
+const motionEase = [0.23, 1, 0.32, 1] as const;
+const surfaceTransition = {
+  transform: { type: "spring" as const, bounce: 0, visualDuration: 0.38 },
+  opacity: { duration: 0.18, ease: motionEase },
+};
+const quickSurfaceTransition = {
+  transform: { type: "spring" as const, bounce: 0, visualDuration: 0.28 },
+  opacity: { duration: 0.14, ease: motionEase },
+};
+const contentCrossfadeTransition = {
+  duration: 0.18,
+  ease: motionEase,
+};
+function heroEntranceTransition(delay: number) {
+  return {
+    transform: {
+      type: "spring" as const,
+      bounce: 0,
+      visualDuration: 0.4,
+      delay,
+    },
+    opacity: { duration: 0.18, ease: motionEase, delay },
+  };
+}
+
 const MarkdownEditor = defineAsyncComponent(
   () => import("@/components/MarkdownEditor.vue"),
 );
@@ -125,6 +158,7 @@ const previewShell = ref<HTMLElement>();
 const isPreviewFullscreen = ref(false);
 const exporting = ref<PreviewExportFormat>();
 const isNarrowWorkspace = useMediaQuery("(max-width: 860px)");
+const prefersReducedMotion = useReducedMotion();
 
 const preview = useVercelPreview();
 const slideSections = computed(() =>
@@ -416,712 +450,826 @@ function resetPdf() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-canvas text-ink">
-    <header class="h-18 border-b border-white/10 bg-navy text-white">
-      <div
-        class="mx-auto flex h-full max-w-[1600px] items-center justify-between px-8 max-[720px]:px-4"
-      >
-        <a
-          class="inline-flex items-center gap-3 text-[19px] font-semibold tracking-[-0.03em] text-white no-underline"
-          href="#"
-          aria-label="Decksmith home"
-        >
-          <span
-            class="grid size-9 place-items-center rounded-xl bg-accent text-white shadow-[0_8px_28px_rgba(15,124,255,.32)]"
-            ><Layers3 :size="20" :stroke-width="2.2"
-          /></span>
-          <span>decksmith</span>
-          <span
-            class="hidden border-l border-white/15 pl-3 text-[12px] font-normal tracking-normal text-white/50 sm:inline"
-            >AI presentation maker</span
-          >
-        </a>
-
-        <div class="flex items-center gap-2.5">
-          <span
-            v-if="!pdf"
-            class="hidden items-center gap-2 text-[13px] text-white/55 md:inline-flex"
-            ><span class="size-1.5 rounded-full bg-[#62d7ad]"></span>Your
-            presentation stays private</span
-          >
-          <span
-            v-else
-            class="hidden max-w-65 items-center gap-2 truncate rounded-full border border-white/12 bg-white/[.07] px-3 py-2 text-[12px] text-white/70 lg:inline-flex"
-            ><FileText :size="14" />{{ pdf.fileName
-            }}<button
-              class="grid cursor-pointer place-items-center text-white/50 transition-transform duration-150 ease-snappy active:scale-90 motion-reduce:transition-none"
-              aria-label="Remove PDF"
-              @click="resetPdf"
-            >
-              <X :size="14" /></button
-          ></span>
-          <DropdownMenuRoot v-if="markdown">
-            <DropdownMenuTrigger as-child>
-              <UiButton
-                variant="secondary"
-                :disabled="Boolean(exporting)"
-              >
-                <LoaderCircle
-                  v-if="exporting"
-                  class="animate-spin motion-reduce:animate-none"
-                  :size="16"
-                />
-                <FileDown v-else :size="16" />
-                {{ exporting ? "Exporting…" : "Export" }}
-                <ChevronDown v-if="!exporting" :size="14" />
-              </UiButton>
-            </DropdownMenuTrigger>
-            <DropdownMenuPortal>
-              <DropdownMenuContent
-                :side-offset="8"
-                align="end"
-                class="z-100 w-72 rounded-2xl border border-black/8 bg-white p-1.5 text-ink shadow-[0_18px_55px_rgba(5,16,37,.2),0_2px_8px_rgba(5,16,37,.08)] outline-none"
-              >
-                <DropdownMenuLabel
-                  class="px-3 pt-2 pb-1.5 text-[11px] font-semibold tracking-[.08em] text-[#8a91a0] uppercase"
-                >
-                  Share your presentation
-                </DropdownMenuLabel>
-                <DropdownMenuItem
-                  class="group flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 outline-none select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-40 data-[highlighted]:bg-[#eef6ff]"
-                  :disabled="preview.status.value !== 'ready'"
-                  @select="exportPresentation('pdf')"
-                >
-                  <span
-                    class="grid size-9 shrink-0 place-items-center rounded-xl bg-[#eaf3ff] text-accent"
-                    ><FileDown :size="18"
-                  /></span>
-                  <span
-                    ><strong class="block text-[13px] font-semibold"
-                      >PDF document</strong
-                    ><small class="mt-0.5 block text-[11px] text-[#777f8d]"
-                      >Best for sharing and printing</small
-                    ></span
-                  >
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  class="group flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 outline-none select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-40 data-[highlighted]:bg-[#eef6ff]"
-                  :disabled="preview.status.value !== 'ready'"
-                  @select="exportPresentation('pptx')"
-                >
-                  <span
-                    class="grid size-9 shrink-0 place-items-center rounded-xl bg-[#fff1e8] text-[#dc5a1f]"
-                    ><Presentation :size="18"
-                  /></span>
-                  <span
-                    ><strong class="block text-[13px] font-semibold"
-                      >PowerPoint</strong
-                    ><small class="mt-0.5 block text-[11px] text-[#777f8d]"
-                      >Open in PowerPoint or Keynote</small
-                    ></span
-                  >
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  class="group flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 outline-none select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-40 data-[highlighted]:bg-[#eef6ff]"
-                  :disabled="preview.status.value !== 'ready'"
-                  @select="exportPresentation('png')"
-                >
-                  <span
-                    class="grid size-9 shrink-0 place-items-center rounded-xl bg-[#edf8f3] text-[#21835f]"
-                    ><Images :size="18"
-                  /></span>
-                  <span
-                    ><strong class="block text-[13px] font-semibold"
-                      >PNG images</strong
-                    ><small class="mt-0.5 block text-[11px] text-[#777f8d]"
-                      >One image per slide, in a ZIP</small
-                    ></span
-                  >
-                </DropdownMenuItem>
-                <DropdownMenuSeparator class="mx-2 my-1 h-px bg-black/7" />
-                <DropdownMenuItem
-                  class="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 outline-none select-none data-[highlighted]:bg-[#f3f5f8]"
-                  @select="downloadMarkdown"
-                >
-                  <span
-                    class="grid size-9 shrink-0 place-items-center rounded-xl bg-[#f1f3f6] text-[#596171]"
-                    ><FileText :size="18"
-                  /></span>
-                  <span
-                    ><strong class="block text-[13px] font-semibold"
-                      >Markdown</strong
-                    ><small class="mt-0.5 block text-[11px] text-[#777f8d]"
-                      >Just the presentation content</small
-                    ></span
-                  >
-                </DropdownMenuItem>
-                <DropdownMenuLabel
-                  class="px-3 pt-2 pb-1 text-[10px] font-semibold tracking-[.08em] text-[#a0a6b1] uppercase"
-                  >Advanced</DropdownMenuLabel
-                >
-                <DropdownMenuItem
-                  class="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 outline-none select-none data-[highlighted]:bg-[#f3f5f8]"
-                  @select="downloadProject"
-                >
-                  <span
-                    class="grid size-9 shrink-0 place-items-center rounded-xl bg-[#f1f3f6] text-[#596171]"
-                    ><FileArchive :size="18"
-                  /></span>
-                  <span
-                    ><strong class="block text-[13px] font-semibold"
-                      >Slidev project</strong
-                    ><small class="mt-0.5 block text-[11px] text-[#777f8d]"
-                      >Source files for developers</small
-                    ></span
-                  >
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenuPortal>
-          </DropdownMenuRoot>
-        </div>
-      </div>
-    </header>
-
-    <main
-      class="h-[calc(100vh-72px)] overflow-auto bg-canvas max-[720px]:h-auto max-[720px]:min-h-[calc(100vh-72px)]"
-    >
-      <section
-        v-if="!markdown"
-        class="upload-gradient flex min-h-full flex-col items-center px-6 py-12 text-center text-white max-[720px]:px-4"
-      >
-        <div class="max-w-240">
+  <MotionConfig reduced-motion="user">
+    <LazyMotion :features="domAnimation" strict>
+      <div class="min-h-screen bg-canvas text-ink">
+        <header class="h-18 border-b border-white/10 bg-navy text-white">
           <div
-            class="mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[.07] px-4 py-2 text-[11px] font-semibold tracking-[0.12em] text-white/75 uppercase backdrop-blur-xl"
+            class="mx-auto flex h-full max-w-[1600px] items-center justify-between px-8 max-[720px]:px-4"
           >
-            <Sparkles :size="15" />From document to deck, in minutes
-          </div>
-          <h1
-            class="text-[clamp(42px,5.5vw,72px)] leading-[1.02] font-[450] tracking-[-0.045em] text-white text-shadow-lg"
-          >
-            Your document has a story.<br /><span
-              class="text-[#a9d8ff] text-shadow-lg text-shadow-blue-950"
-              >Bring it to life.</span
+            <a
+              class="inline-flex items-center gap-3 text-[19px] font-semibold tracking-[-0.03em] text-white no-underline"
+              href="#"
+              aria-label="Decksmith home"
             >
-          </h1>
-          <p
-            class="mx-auto mt-5 max-w-170 text-[17px] leading-[1.65] text-blue-100"
-          >
-            Upload a report, proposal, or guide. Decksmith finds the narrative
-            and turns it into a presentation you can shape and share.
-          </p>
-        </div>
-
-        <button
-          ref="dropZone"
-          type="button"
-          class="mt-9 flex w-full max-w-162.5 cursor-pointer flex-col items-center justify-center rounded-[26px] bg-linear-to-b from-white to-white/95 ring ring-white p-8 text-[#151a24] shadow-lg shadow-blue-950/50 transition-transform duration-150 ease-snappy hover:-translate-y-0.5 active:scale-[.99] motion-reduce:transform-none motion-reduce:transition-none"
-          :class="[
-            pdf ? 'min-h-40' : 'min-h-53.75',
-            isDraggingOver ? '-translate-y-1 ring-4 ring-white/25' : '',
-          ]"
-          @click="openFileDialog()"
-        >
-          <template v-if="pdf">
-            <span
-              class="mb-3 grid size-12 place-items-center rounded-2xl bg-[#eaf8f1] text-[#24845f]"
-            >
-              <Check :size="23" :stroke-width="2.2" />
-            </span>
-            <strong
-              class="max-w-full truncate text-[16px] font-semibold tracking-[-0.01em]"
-            >
-              {{ pdf.fileName }}
-            </strong>
-            <span class="mt-1 text-[13px] text-[#7c8592]"
-              >{{ pdf.pageCount }} pages · Ready to create</span
-            >
-            <small class="mt-3 text-[11px] font-medium text-accent"
-              >Choose a different PDF</small
-            >
-          </template>
-          <template v-else>
-            <span
-              class="mb-4 grid size-14 place-items-center rounded-2xl bg-[#eef6ff] text-accent"
-            >
-              <CloudUpload :size="28" :stroke-width="1.8" />
-            </span>
-            <strong class="text-[17px] font-semibold tracking-[-0.01em]"
-              >Drop your PDF here</strong
-            >
-            <span class="mt-1.5 text-[14px] text-[#808897]"
-              >or choose a file from your computer</span
-            >
-            <span
-              class="mt-5 inline-flex h-10 items-center rounded-xl text-shadow-2xs ring-blue-700/70 inset-shadow-xs inset-shadow-blue-400 ring bg-linear-to-b bg-accent from-blue-500 via-accent to-blue-700/60 px-5 text-[13px] font-semibold text-white shadow-md shadow-blue-800/30"
-              >Choose a PDF</span
-            >
-            <small class="mt-3 text-[11px] text-[#a0a7b2]"
-              >Up to 25 MB · 80 pages</small
-            >
-          </template>
-        </button>
-
-        <div
-          v-if="status === 'extracting'"
-          class="mt-5 flex items-center gap-2 text-[13px] text-white/75"
-        >
-          <LoaderCircle
-            class="animate-spin motion-reduce:animate-none"
-            :size="18"
-          />Reading page {{ progress.current }} of {{ progress.total || "…" }}
-        </div>
-
-        <article
-          class="mt-6 w-full max-w-162.5 rounded-[22px] border border-white/70 bg-white p-5 text-left text-[#252a33] shadow-[0_18px_55px_rgba(2,21,61,.22)]"
-        >
-          <label class="grid gap-2 text-[12px] font-medium text-[#5d6572]">
-            Presentation title
-            <input
-              v-model="config.title"
-              class="h-11 w-full rounded-xl border border-[#dce1e8] bg-[#fbfcfd] px-3.5 text-[13px] font-normal text-[#262b34]"
-              placeholder="Untitled presentation"
-            />
-          </label>
-          <div class="mt-4 grid grid-cols-2 gap-4 max-[620px]:grid-cols-1">
-            <label class="grid gap-2 text-[12px] font-medium text-[#5d6572]">
-              Voice
-              <UiSelect v-model="config.tone" :options="toneOptions" />
-            </label>
-            <div>
-              <span class="text-[12px] font-medium text-[#5d6572]"
-                >Amount of detail</span
+              <span
+                class="grid size-9 place-items-center rounded-xl bg-accent text-white shadow-[0_8px_28px_rgba(15,124,255,.32)]"
+                ><Layers3 :size="20" :stroke-width="2.2"
+              /></span>
+              <span>decksmith</span>
+              <span
+                class="hidden border-l border-white/15 pl-3 text-[12px] font-normal tracking-normal text-white/50 sm:inline"
+                >AI presentation maker</span
               >
-              <UiSegmentedControl
-                v-model="config.density"
-                class="mt-2"
-                :options="densityOptions"
-                label="Amount of detail"
-              />
+            </a>
+
+            <div class="flex items-center gap-2.5">
+              <span
+                v-if="!pdf"
+                class="hidden items-center gap-2 text-[13px] text-white/55 md:inline-flex"
+                ><span class="size-1.5 rounded-full bg-[#62d7ad]"></span>Your
+                presentation stays private</span
+              >
+              <span
+                v-else
+                class="hidden max-w-65 items-center gap-2 truncate rounded-full border border-white/12 bg-white/[.07] px-3 py-2 text-[12px] text-white/70 lg:inline-flex"
+                ><FileText :size="14" />{{ pdf.fileName
+                }}<button
+                  class="grid cursor-pointer place-items-center text-white/50 transition-transform duration-150 ease-snappy active:scale-90 motion-reduce:transition-none"
+                  aria-label="Remove PDF"
+                  @click="resetPdf"
+                >
+                  <X :size="14" /></button
+              ></span>
+              <DropdownMenuRoot v-if="markdown">
+                <DropdownMenuTrigger as-child>
+                  <UiButton variant="secondary" :disabled="Boolean(exporting)">
+                    <LoaderCircle
+                      v-if="exporting"
+                      class="animate-spin motion-reduce:animate-none"
+                      :size="16"
+                    />
+                    <FileDown v-else :size="16" />
+                    {{ exporting ? "Exporting…" : "Export" }}
+                    <ChevronDown v-if="!exporting" :size="14" />
+                  </UiButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuContent
+                    :side-offset="8"
+                    align="end"
+                    class="dropdown-surface z-100 w-72 rounded-2xl border border-black/8 bg-white p-1.5 text-ink shadow-[0_18px_55px_rgba(5,16,37,.2),0_2px_8px_rgba(5,16,37,.08)] outline-none"
+                  >
+                    <DropdownMenuLabel
+                      class="px-3 pt-2 pb-1.5 text-[11px] font-semibold tracking-[.08em] text-[#8a91a0] uppercase"
+                    >
+                      Share your presentation
+                    </DropdownMenuLabel>
+                    <DropdownMenuItem
+                      class="group flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 outline-none select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-40 data-[highlighted]:bg-[#eef6ff]"
+                      :disabled="preview.status.value !== 'ready'"
+                      @select="exportPresentation('pdf')"
+                    >
+                      <span
+                        class="grid size-9 shrink-0 place-items-center rounded-xl bg-[#eaf3ff] text-accent"
+                        ><FileDown :size="18"
+                      /></span>
+                      <span
+                        ><strong class="block text-[13px] font-semibold"
+                          >PDF document</strong
+                        ><small class="mt-0.5 block text-[11px] text-[#777f8d]"
+                          >Best for sharing and printing</small
+                        ></span
+                      >
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      class="group flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 outline-none select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-40 data-[highlighted]:bg-[#eef6ff]"
+                      :disabled="preview.status.value !== 'ready'"
+                      @select="exportPresentation('pptx')"
+                    >
+                      <span
+                        class="grid size-9 shrink-0 place-items-center rounded-xl bg-[#fff1e8] text-[#dc5a1f]"
+                        ><Presentation :size="18"
+                      /></span>
+                      <span
+                        ><strong class="block text-[13px] font-semibold"
+                          >PowerPoint</strong
+                        ><small class="mt-0.5 block text-[11px] text-[#777f8d]"
+                          >Open in PowerPoint or Keynote</small
+                        ></span
+                      >
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      class="group flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 outline-none select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-40 data-[highlighted]:bg-[#eef6ff]"
+                      :disabled="preview.status.value !== 'ready'"
+                      @select="exportPresentation('png')"
+                    >
+                      <span
+                        class="grid size-9 shrink-0 place-items-center rounded-xl bg-[#edf8f3] text-[#21835f]"
+                        ><Images :size="18"
+                      /></span>
+                      <span
+                        ><strong class="block text-[13px] font-semibold"
+                          >PNG images</strong
+                        ><small class="mt-0.5 block text-[11px] text-[#777f8d]"
+                          >One image per slide, in a ZIP</small
+                        ></span
+                      >
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator class="mx-2 my-1 h-px bg-black/7" />
+                    <DropdownMenuItem
+                      class="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 outline-none select-none data-[highlighted]:bg-[#f3f5f8]"
+                      @select="downloadMarkdown"
+                    >
+                      <span
+                        class="grid size-9 shrink-0 place-items-center rounded-xl bg-[#f1f3f6] text-[#596171]"
+                        ><FileText :size="18"
+                      /></span>
+                      <span
+                        ><strong class="block text-[13px] font-semibold"
+                          >Markdown</strong
+                        ><small class="mt-0.5 block text-[11px] text-[#777f8d]"
+                          >Just the presentation content</small
+                        ></span
+                      >
+                    </DropdownMenuItem>
+                    <DropdownMenuLabel
+                      class="px-3 pt-2 pb-1 text-[10px] font-semibold tracking-[.08em] text-[#a0a6b1] uppercase"
+                      >Advanced</DropdownMenuLabel
+                    >
+                    <DropdownMenuItem
+                      class="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 outline-none select-none data-[highlighted]:bg-[#f3f5f8]"
+                      @select="downloadProject"
+                    >
+                      <span
+                        class="grid size-9 shrink-0 place-items-center rounded-xl bg-[#f1f3f6] text-[#596171]"
+                        ><FileArchive :size="18"
+                      /></span>
+                      <span
+                        ><strong class="block text-[13px] font-semibold"
+                          >Slidev project</strong
+                        ><small class="mt-0.5 block text-[11px] text-[#777f8d]"
+                          >Source files for developers</small
+                        ></span
+                      >
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenuPortal>
+              </DropdownMenuRoot>
             </div>
           </div>
-          <UiAlert
-            v-if="error"
-            class="mt-4"
-          >
-            {{ error }}
-          </UiAlert>
-          <UiButton
-            size="lg"
-            class="mt-5 w-full"
-            :disabled="!canGenerate"
-            @click="generateDeck"
-          >
-            <LoaderCircle
-              v-if="status === 'generating'"
-              class="animate-spin motion-reduce:animate-none"
-              :size="19"
-            />
-            <WandSparkles v-else :size="19" />
-            {{
-              status === "generating"
-                ? "Creating your presentation…"
-                : "Create my presentation"
-            }}
-            <ArrowRight
-              v-if="status !== 'generating'"
-              class="ml-auto"
-              :size="18"
-            />
-          </UiButton>
-        </article>
+        </header>
 
-        <div
-          class="mt-9 grid w-full max-w-225 grid-cols-3 border-t border-white/12 pt-7 text-left max-[720px]:grid-cols-1 max-[720px]:gap-4"
+        <main
+          class="h-[calc(100vh-72px)] overflow-auto bg-navy max-[720px]:h-auto max-[720px]:min-h-[calc(100vh-72px)]"
         >
-          <div class="flex items-center justify-center gap-3">
-            <span
-              class="grid size-10 place-items-center rounded-xl bg-white/8 text-[#b9ddff]"
-              ><FileText :size="19"
-            /></span>
-            <span
-              ><strong class="block text-[13px] font-medium text-white/85"
-                >Works with real documents</strong
-              ><small class="mt-1 block text-[11px] text-white/45"
-                >Reports, proposals, guides, and more</small
-              ></span
+          <AnimatePresence mode="wait">
+            <m.section
+              v-if="!markdown"
+              key="upload"
+              class="upload-gradient flex min-h-full flex-col items-center px-6 py-12 text-center text-white max-[720px]:px-4"
+              :exit="{ opacity: 0 }"
+              :transition="{ opacity: { duration: 0.16, ease: motionEase } }"
             >
-          </div>
-          <div class="flex items-center justify-center gap-3">
-            <span
-              class="grid size-10 place-items-center rounded-xl bg-white/8 text-[#b9ddff]"
-              ><WandSparkles :size="19"
-            /></span>
-            <span
-              ><strong class="block text-[13px] font-medium text-white/85"
-                >Organized by ideas</strong
-              ><small class="mt-1 block text-[11px] text-white/45"
-                >Not one slide per page</small
-              ></span
-            >
-          </div>
-          <div class="flex items-center justify-center gap-3">
-            <span
-              class="grid size-10 place-items-center rounded-xl bg-white/8 text-[#b9ddff]"
-              ><Layers3 :size="19"
-            /></span>
-            <span
-              ><strong class="block text-[13px] font-medium text-white/85"
-                >Everything stays editable</strong
-              ><small class="mt-1 block text-[11px] text-white/45"
-                >Change the words, style, and structure</small
-              ></span
-            >
-          </div>
-        </div>
-      </section>
+              <div class="max-w-240">
+                <m.div
+                  class="mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[.07] px-4 py-2 text-[11px] font-semibold tracking-[0.12em] text-white/75 uppercase backdrop-blur-xl"
+                  :initial="
+                    prefersReducedMotion
+                      ? { opacity: 0 }
+                      : { opacity: 0, transform: 'translateY(-10px)' }
+                  "
+                  :animate="{ opacity: 1, transform: 'translateY(0px)' }"
+                  :transition="heroEntranceTransition(0.04)"
+                >
+                  <Sparkles :size="15" />From document to deck, in minutes
+                </m.div>
+                <m.h1
+                  class="text-[clamp(42px,5.5vw,72px)] leading-[1.02] font-[450] tracking-[-0.045em] text-white text-shadow-lg"
+                  :initial="
+                    prefersReducedMotion
+                      ? { opacity: 0 }
+                      : { opacity: 0, transform: 'translateY(-12px)' }
+                  "
+                  :animate="{ opacity: 1, transform: 'translateY(0px)' }"
+                  :transition="heroEntranceTransition(0.1)"
+                >
+                  Your document has a story.<br /><span
+                    class="text-[#a9d8ff] text-shadow-lg text-shadow-blue-950"
+                    >Bring it to life.</span
+                  >
+                </m.h1>
+                <m.p
+                  class="mx-auto mt-5 max-w-170 text-[17px] leading-[1.65] text-blue-100"
+                  :initial="
+                    prefersReducedMotion
+                      ? { opacity: 0 }
+                      : { opacity: 0, transform: 'translateY(-10px)' }
+                  "
+                  :animate="{ opacity: 1, transform: 'translateY(0px)' }"
+                  :transition="heroEntranceTransition(0.16)"
+                >
+                  Upload a report, proposal, or guide. Decksmith finds the
+                  narrative and turns it into a presentation you can shape and
+                  share.
+                </m.p>
+              </div>
 
-      <section
-        v-else
-        class="h-full overflow-hidden bg-[#f7f9fc] bg-[radial-gradient(#dce2ea_1px,transparent_1px)] bg-size-[16px_16px] max-[860px]:h-auto max-[860px]:min-h-full max-[860px]:overflow-visible"
-      >
-        <div class="mx-auto h-full">
-          <SplitterGroup
-            :direction="isNarrowWorkspace ? 'vertical' : 'horizontal'"
-            :auto-save-id="
-              isNarrowWorkspace
-                ? 'decksmith-workspace-vertical'
-                : 'decksmith-workspace-horizontal'
-            "
-            class="h-full min-h-0 w-full max-[860px]:h-75"
-          >
-            <SplitterPanel
-              :default-size="42"
-              :min-size="28"
-              class="min-w-148 pr-2 pl-6 pt-6 pb-6"
-            >
-              <section
-                class="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[22px] border border-[#e1e5eb] bg-white shadow-lg"
+              <button
+                ref="dropZone"
+                type="button"
+                class="relative mt-9 flex min-h-64 w-full max-w-162.5 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-[26px] bg-linear-to-b from-white to-white/95 ring ring-white text-[#151a24] shadow-lg shadow-blue-950/50 transition-transform duration-150 ease-snappy hover:-translate-y-0.5 active:scale-[.99] motion-reduce:transform-none motion-reduce:transition-none"
+                :class="
+                  isDraggingOver ? '-translate-y-1 ring-4 ring-white/25' : ''
+                "
+                @click="openFileDialog()"
               >
-                <ThemeStudio
-                  v-model:variant="config.variant"
-                  v-model:accent="config.accent"
-                  v-model:atmosphere="config.atmosphere"
-                />
-                <TabsRoot
-                  v-model="editorTab"
-                  class="flex min-h-0 flex-1 flex-col"
-                >
-                  <div
-                    class="flex h-16 shrink-0 items-center justify-between border-b border-[#e9ecf0] px-5"
+                <AnimatePresence :initial="false">
+                  <m.div
+                    v-if="pdf"
+                    key="selected-pdf"
+                    class="absolute inset-0 flex w-full flex-col items-center justify-center p-8"
+                    :initial="{ opacity: 0 }"
+                    :animate="{ opacity: 1 }"
+                    :exit="{ opacity: 0 }"
+                    :transition="contentCrossfadeTransition"
                   >
-                    <div>
-                      <h2 class="text-[15px] font-semibold text-[#252a33]">
-                        Edit your presentation
-                      </h2>
-                      <p class="mt-0.5 text-[11px] text-[#929aa7]">
-                        Change the wording, structure, or formatting
-                      </p>
-                    </div>
-                    <TabsList class="flex h-9 gap-1 rounded-xl bg-[#f1f3f6] p-1"
-                      ><TabsTrigger
-                        class="flex cursor-pointer items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium text-[#78818d] data-[state=active]:bg-white data-[state=active]:text-[#252a33] data-[state=active]:shadow-sm"
-                        value="outline"
-                        ><Layers3 :size="15" />Outline
-                        <span class="text-[10px] text-[#9aa2ae]">{{
-                          outline.length
-                        }}</span></TabsTrigger
-                      ><TabsTrigger
-                        class="flex cursor-pointer items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium text-[#78818d] data-[state=active]:bg-white data-[state=active]:text-[#252a33] data-[state=active]:shadow-sm"
-                        value="slide"
-                        >Slide {{ selectedSlideIndex + 1 }}</TabsTrigger
-                      ><TabsTrigger
-                        class="flex cursor-pointer items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium text-[#78818d] data-[state=active]:bg-white data-[state=active]:text-[#252a33] data-[state=active]:shadow-sm"
-                        value="markdown"
-                        ><Code2 :size="15" />Full deck</TabsTrigger
-                      ></TabsList
-                    >
-                  </div>
-                  <TabsContent
-                    value="slide"
-                    class="flex min-h-0 flex-1 flex-col"
-                  >
-                    <div
-                      class="flex h-11 shrink-0 items-center justify-between border-b border-[#eef0f3] px-5 text-[11px] text-[#858e9b]"
-                    >
-                      <span>Slide {{ selectedSlideIndex + 1 }}</span>
-                      <strong class="truncate font-medium text-[#515966]">{{
-                        selectedSlide?.title
-                      }}</strong>
-                    </div>
-                    <MarkdownEditor
-                      :key="selectedSlideIndex"
-                      class="min-h-0 flex-1"
-                      :model-value="selectedSlide?.content || ''"
-                      :label="`Markdown for slide ${selectedSlideIndex + 1}`"
-                      @update:model-value="onSlideMarkdownInput"
-                    />
-                  </TabsContent>
-                  <TabsContent value="markdown" class="min-h-0 flex-1">
-                    <MarkdownEditor
-                      :model-value="markdown"
-                      label="Presentation content editor"
-                      @update:model-value="onMarkdownInput"
-                    />
-                  </TabsContent>
-                  <TabsContent
-                    value="outline"
-                    class="min-h-0 flex-1 overflow-y-auto p-4"
-                    ><button
-                      v-for="item in outline"
-                      :key="item.index"
-                      class="grid min-h-[58px] w-full cursor-pointer grid-cols-[40px_1fr_auto] items-center gap-2 rounded-xl px-3 text-left transition-[transform,background-color] duration-150 ease-snappy hover:bg-[#f5f7f9] active:scale-[.99] motion-reduce:transition-none"
-                      :class="{
-                        'bg-[#eef6ff]': selectedSlideIndex === item.index,
-                      }"
-                      @click="openSlide(item.index)"
-                    >
-                      <span class="text-[11px] text-[#9aa2ae]">{{
-                        String(item.index + 1).padStart(2, "0")
-                      }}</span
-                      ><strong class="text-[13px] font-medium text-[#444b56]">{{
-                        item.title
-                      }}</strong
-                      ><ArrowRight class="text-[#a1a8b3]" :size="15" /></button
-                  ></TabsContent>
-                  <footer
-                    class="shrink-0 border-t border-[#e9ecf0] bg-[#fbfcfd] p-3.5"
-                  >
-                    <UiAlert
-                      v-if="error"
-                      class="mb-3"
-                      compact
-                    >
-                      {{ error }}
-                    </UiAlert>
-                    <div class="flex flex-wrap items-end justify-between gap-3">
-                      <label
-                        class="grid min-w-[145px] flex-1 gap-1.5 text-[11px] font-medium text-[#69717d]"
-                        >Voice<UiSelect
-                          v-model="config.tone"
-                          :options="toneOptions"
-                          size="sm"
-                          surface="plain"
-                      /></label>
-                      <div class="ml-auto text-right">
-                        <UiButton
-                          :disabled="status === 'generating'"
-                          @click="rewriteDeck"
-                        >
-                          <LoaderCircle
-                            v-if="status === 'generating'"
-                            class="animate-spin motion-reduce:animate-none"
-                            :size="15"
-                          /><WandSparkles v-else :size="15" />{{
-                            status === "generating" ? "Rewriting…" : "Rewrite"
-                          }}
-                        </UiButton>
-                      </div>
-                    </div>
-                  </footer>
-                </TabsRoot>
-              </section>
-            </SplitterPanel>
-            <SplitterResizeHandle
-              class="group relative grid w-5 shrink-0 cursor-col-resize place-items-center outline-none max-[860px]:h-5 max-[860px]:w-full max-[860px]:cursor-row-resize"
-            >
-              <span
-                class="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-[#d8dee7] transition-colors duration-150 group-data-[state=drag]:bg-accent group-focus-visible:bg-accent max-[860px]:inset-x-0 max-[860px]:top-1/2 max-[860px]:h-px max-[860px]:w-auto max-[860px]:-translate-y-1/2 max-[860px]:translate-x-0"
-              ></span>
-              <span
-                class="relative grid h-9 w-4 place-items-center rounded-full border border-[#d8dee7] bg-white text-[#9aa2ae] shadow-sm transition-[border-color,color,transform] duration-150 group-hover:border-[#b9c2ce] group-hover:text-[#687281] group-data-[state=drag]:scale-105 group-data-[state=drag]:border-accent group-data-[state=drag]:text-accent group-focus-visible:border-accent group-focus-visible:text-accent max-[860px]:h-4 max-[860px]:w-9"
-                ><GripVertical class="max-[860px]:rotate-90" :size="12"
-              /></span>
-            </SplitterResizeHandle>
-            <SplitterPanel
-              :default-size="58"
-              :min-size="38"
-              class="min-w-0 pl-2 pt-6 pb-6 pr-6"
-            >
-              <section
-                class="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[22px] border border-[#d9dee6] bg-white shadow-lg"
-              >
-                <div
-                  class="flex h-16 shrink-0 items-center justify-between border-b border-[#e9ecf0] px-5"
-                >
-                  <div class="flex items-center gap-3">
                     <span
-                      class="grid size-9 place-items-center rounded-xl bg-[#eef6ff] text-accent"
-                      ><Play :size="16" fill="currentColor"
-                    /></span>
-                    <div>
-                      <h2 class="text-[14px] font-semibold text-[#252a33]">
-                        Presentation preview
-                      </h2>
-                      <small class="mt-0.5 block text-[11px] text-[#929aa7]"
-                        >Your live preview starts automatically</small
-                      >
-                    </div>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <UiButton
-                      v-if="preview.terminal.value.length"
-                      variant="icon"
-                      size="icon"
-                      aria-label="Show troubleshooting details"
-                      @click="showTerminal = !showTerminal"
+                      class="mb-3 grid size-12 place-items-center rounded-2xl bg-[#eaf8f1] text-[#24845f]"
                     >
-                      <TerminalSquare :size="16" /></UiButton
-                    ><UiButton
-                      v-if="preview.status.value === 'error'"
-                      size="sm"
-                      @click="startPreview"
+                      <Check :size="23" :stroke-width="2.2" />
+                    </span>
+                    <strong
+                      class="max-w-full truncate text-[16px] font-semibold tracking-[-0.01em]"
                     >
-                      <RefreshCw :size="15" />Try again
-                    </UiButton>
-                  </div>
-                </div>
-                <div
-                  class="preview-grid relative min-h-0 flex-1 overflow-hidden"
-                >
-                  <div
-                    v-if="preview.url.value"
-                    ref="previewShell"
-                    class="flex size-full min-h-0 flex-col overflow-hidden"
-                  >
-                    <iframe
-                      ref="previewFrame"
-                      class="min-h-0 w-full flex-1 border-0 bg-white"
-                      :src="preview.url.value"
-                      title="Presentation preview"
-                      allow="fullscreen; screen-wake-lock"
-                      allowfullscreen
-                      @load="syncNativePreviewControls"
-                    ></iframe>
-                    <div
-                      class="flex h-12 shrink-0 items-center justify-between border-t border-[#e4e8ee] bg-white px-3 text-[#616a77]"
+                      {{ pdf.fileName }}
+                    </strong>
+                    <span class="mt-1 text-[13px] text-[#7c8592]"
+                      >{{ pdf.pageCount }} pages · Ready to create</span
                     >
-                      <span
-                        class="hidden min-w-0 items-center gap-2 px-2 text-[11px] font-medium sm:inline-flex"
-                        :class="{
-                          'text-[#368567]': preview.status.value === 'ready',
-                          'text-[#aa5862]': preview.status.value === 'error',
-                        }"
-                        ><span
-                          class="size-1.5 shrink-0 rounded-full"
-                          :class="
-                            preview.status.value === 'ready'
-                              ? 'bg-[#4db78c]'
-                              : preview.status.value === 'error'
-                                ? 'bg-[#d77983]'
-                                : 'bg-[#a7aeb8]'
-                          "
-                        ></span
-                        ><span class="truncate">{{
-                          friendlyPreviewMessage
-                        }}</span></span
-                      >
-                      <div
-                        class="flex items-center gap-1 rounded-xl bg-[#f2f4f7] p-1"
-                      >
-                        <UiButton
-                          variant="ghost"
-                          size="compact"
-                          aria-label="Previous slide"
-                          @click="sendPreviewCommand('previous')"
-                        >
-                          <ChevronLeft :size="16" />Previous
-                        </UiButton>
-                        <span
-                          class="h-4 w-px bg-[#d9dee5]"
-                          aria-hidden="true"
-                        ></span>
-                        <UiButton
-                          variant="ghost"
-                          size="compact"
-                          aria-label="Next slide"
-                          @click="sendPreviewCommand('next')"
-                        >
-                          Next<ChevronRight :size="16" />
-                        </UiButton>
-                      </div>
-                      <UiButton
-                        variant="ghost"
-                        size="compact"
-                        class="px-2.5"
-                        :aria-label="
-                          isPreviewFullscreen
-                            ? 'Exit fullscreen'
-                            : 'Enter fullscreen'
-                        "
-                        @click="togglePreviewFullscreen"
-                      >
-                        <Minimize2
-                          v-if="isPreviewFullscreen"
-                          :size="16"
-                        /><Maximize2 v-else :size="16" /><span
-                          class="hidden sm:inline"
-                          >{{
-                            isPreviewFullscreen ? "Exit" : "Full screen"
-                          }}</span
-                        >
-                      </UiButton>
-                    </div>
-                  </div>
-                  <div
+                    <small
+                      class="mt-3 text-[11px] font-medium text-accent shrink-0"
+                      >Choose a different PDF</small
+                    >
+                  </m.div>
+                  <m.div
                     v-else
-                    class="flex size-full min-h-[400px] flex-col items-center justify-center rounded-2xl border border-[#dfe4eb] bg-white/85 text-center backdrop-blur-sm"
+                    key="empty-upload"
+                    class="absolute inset-0 flex w-full flex-col items-center justify-center p-8"
+                    :initial="{ opacity: 0 }"
+                    :animate="{ opacity: 1 }"
+                    :exit="{ opacity: 0 }"
+                    :transition="contentCrossfadeTransition"
                   >
-                    <div
-                      class="preview-illustration relative mb-7 h-[88px] w-[142px] rounded-xl border border-[#d9e0e9] bg-white shadow-[8px_9px_0_-3px_#eef2f7,8px_9px_0_-2px_#dfe5ed]"
+                    <span
+                      class="mb-4 grid size-14 shrink-0 place-items-center rounded-2xl bg-[#eef6ff] text-accent"
                     >
-                      <div></div>
-                      <span class="absolute right-4 bottom-4 text-accent"
-                        ><Play :size="25" fill="currentColor"
-                      /></span>
-                    </div>
-                    <h3 class="text-[16px] font-semibold text-[#303640]">
-                      {{
-                        isPreviewBusy
-                          ? "Preparing your presentation…"
-                          : "Ready when you are"
-                      }}
-                    </h3>
-                    <p
-                      class="mx-6 mt-2 mb-5 max-w-[390px] text-[13px] leading-relaxed text-[#818996]"
+                      <CloudUpload :size="28" :stroke-width="1.8" />
+                    </span>
+                    <strong class="text-[17px] font-semibold tracking-[-0.01em]"
+                      >Drop your PDF here</strong
                     >
-                      {{ friendlyPreviewMessage }}
-                    </p>
-                    <UiButton
-                      v-if="preview.status.value === 'error'"
-                      @click="startPreview"
+                    <span class="mt-1.5 text-[14px] text-[#808897]"
+                      >or choose a file from your computer</span
                     >
-                      <RefreshCw :size="16" />Try preview again
-                    </UiButton>
-                    <div
-                      v-else-if="isPreviewBusy"
-                      class="mt-3 h-1 w-[170px] overflow-hidden rounded-full bg-[#e2e7ee]"
+                    <span
+                      class="mt-5 inline-flex min-h-9 items-center rounded-xl text-shadow-2xs ring-blue-700/70 inset-shadow-xs inset-shadow-blue-400 ring bg-linear-to-b bg-accent from-blue-500 via-accent to-blue-700/60 px-5 text-[13px] font-semibold text-white shadow-md shadow-blue-800/30"
+                      >Choose a PDF</span
                     >
-                      <span
-                        class="preview-progress block h-full w-[42%] rounded-full bg-accent motion-reduce:animate-pulse"
-                      ></span>
-                    </div>
+                    <small class="mt-3 text-[11px] text-[#a0a7b2]"
+                      >Up to 25 MB · 80 pages</small
+                    >
+                  </m.div>
+                </AnimatePresence>
+              </button>
+
+              <div
+                v-if="status === 'extracting'"
+                class="mt-5 flex items-center gap-2 text-[13px] text-white/75"
+              >
+                <LoaderCircle
+                  class="animate-spin motion-reduce:animate-none"
+                  :size="18"
+                />Reading page {{ progress.current }} of
+                {{ progress.total || "…" }}
+              </div>
+
+              <article
+                class="mt-6 w-full max-w-162.5 rounded-[22px] ring ring-gray-600/50 bg-white py-4 px-4 text-left text-[#252a33] shadow-lg shadow-blue-800/30"
+              >
+                <label
+                  class="grid gap-1.5 text-[12px] font-medium text-[#5d6572]"
+                >
+                  Presentation title
+                  <input
+                    v-model="config.title"
+                    class="h-10 w-full rounded-lg border border-[#dce1e8] bg-[#fbfcfd] px-3 text-[13px] font-normal text-[#262b34]"
+                    placeholder="Untitled presentation"
+                  />
+                </label>
+                <div
+                  class="mt-3 grid grid-cols-2 gap-4 max-[620px]:grid-cols-1"
+                >
+                  <div>
+                    <label
+                      class="grid gap-1 text-[12px] font-medium text-[#5d6572]"
+                    >
+                      Voice
+                      <UiSelect v-model="config.tone" :options="toneOptions" />
+                    </label>
                   </div>
-                  <div
-                    v-if="showTerminal"
-                    class="absolute right-8 bottom-8 left-8 max-h-[45%] overflow-hidden rounded-2xl border border-[#283448] bg-[#071426]/95 text-white shadow-[0_20px_55px_rgba(7,20,38,.28)]"
-                  >
-                    <div
-                      class="flex h-10 items-center justify-between border-b border-white/10 px-3.5 text-[11px] text-white/60"
+                  <div class="grid gap-1">
+                    <span class="text-[12px] font-medium text-[#5d6572]"
+                      >Amount of detail</span
                     >
-                      <span>Troubleshooting details</span
-                      ><button
-                        class="cursor-pointer transition-transform duration-150 active:scale-90"
-                        @click="showTerminal = false"
-                      >
-                        <X :size="15" />
-                      </button>
-                    </div>
-                    <pre
-                      class="m-0 max-h-[230px] overflow-auto p-4 font-mono text-[11px] leading-relaxed whitespace-pre-wrap text-white/70"
-                      >{{ preview.terminal.value.join("\n") }}</pre
-                    >
+                    <UiSegmentedControl
+                      v-model="config.density"
+                      :options="densityOptions"
+                      label="Amount of detail"
+                    />
                   </div>
                 </div>
-              </section>
-            </SplitterPanel>
-          </SplitterGroup>
-        </div>
-      </section>
-    </main>
-  </div>
+                <UiAlert v-if="error" class="mt-4">
+                  {{ error }}
+                </UiAlert>
+                <UiButton
+                  size="lg"
+                  class="mt-3 w-full"
+                  :disabled="!canGenerate"
+                  @click="generateDeck"
+                >
+                  <LoaderCircle
+                    v-if="status === 'generating'"
+                    class="animate-spin motion-reduce:animate-none"
+                    :size="19"
+                  />
+                  <WandSparkles v-else :size="19" />
+                  {{
+                    status === "generating"
+                      ? "Creating your presentation…"
+                      : "Create my presentation"
+                  }}
+                  <ArrowRight
+                    v-if="status !== 'generating'"
+                    class="ml-auto"
+                    :size="18"
+                  />
+                </UiButton>
+              </article>
+
+              <div
+                class="mt-9 grid w-full max-w-225 grid-cols-3 border-t border-white/12 pt-7 text-left max-[720px]:grid-cols-1 max-[720px]:gap-4"
+              >
+                <div class="flex items-center justify-center gap-3">
+                  <span
+                    class="grid size-10 place-items-center rounded-xl bg-white/8 text-[#b9ddff]"
+                    ><FileText :size="19"
+                  /></span>
+                  <span
+                    ><strong class="block text-[13px] font-medium text-white/85"
+                      >Works with real documents</strong
+                    ><small class="mt-1 block text-[11px] text-white/45"
+                      >Reports, proposals, guides, and more</small
+                    ></span
+                  >
+                </div>
+                <div class="flex items-center justify-center gap-3">
+                  <span
+                    class="grid size-10 place-items-center rounded-xl bg-white/8 text-[#b9ddff]"
+                    ><WandSparkles :size="19"
+                  /></span>
+                  <span
+                    ><strong class="block text-[13px] font-medium text-white/85"
+                      >Organized by ideas</strong
+                    ><small class="mt-1 block text-[11px] text-white/45"
+                      >Not one slide per page</small
+                    ></span
+                  >
+                </div>
+                <div class="flex items-center justify-center gap-3">
+                  <span
+                    class="grid size-10 place-items-center rounded-xl bg-white/8 text-[#b9ddff]"
+                    ><Layers3 :size="19"
+                  /></span>
+                  <span
+                    ><strong class="block text-[13px] font-medium text-white/85"
+                      >Everything stays editable</strong
+                    ><small class="mt-1 block text-[11px] text-white/45"
+                      >Change the words, style, and structure</small
+                    ></span
+                  >
+                </div>
+              </div>
+            </m.section>
+
+            <m.section
+              v-else
+              key="workspace"
+              class="h-full overflow-hidden bg-[#f7f9fc] bg-[radial-gradient(#dce2ea_1px,transparent_1px)] bg-size-[16px_16px] max-[860px]:h-auto max-[860px]:min-h-full max-[860px]:overflow-visible"
+              :initial="
+                prefersReducedMotion
+                  ? { opacity: 0 }
+                  : { opacity: 0, transform: 'translateY(12px)' }
+              "
+              :animate="{ opacity: 1, transform: 'translateY(0px)' }"
+              :exit="{ opacity: 0 }"
+              :transition="surfaceTransition"
+            >
+              <div class="mx-auto h-full">
+                <SplitterGroup
+                  :direction="isNarrowWorkspace ? 'vertical' : 'horizontal'"
+                  :auto-save-id="
+                    isNarrowWorkspace
+                      ? 'decksmith-workspace-vertical'
+                      : 'decksmith-workspace-horizontal'
+                  "
+                  class="h-full min-h-0 w-full max-[860px]:h-75"
+                >
+                  <SplitterPanel
+                    :default-size="42"
+                    :min-size="28"
+                    class="min-w-148 pr-2 pl-6 pt-6 pb-6"
+                  >
+                    <section
+                      class="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[22px] border border-[#e1e5eb] bg-white shadow-lg"
+                    >
+                      <ThemeStudio
+                        v-model:variant="config.variant"
+                        v-model:accent="config.accent"
+                        v-model:atmosphere="config.atmosphere"
+                      />
+                      <TabsRoot
+                        v-model="editorTab"
+                        class="flex min-h-0 flex-1 flex-col"
+                      >
+                        <div
+                          class="flex h-16 shrink-0 items-center justify-between border-b border-[#e9ecf0] px-5"
+                        >
+                          <div>
+                            <h2
+                              class="text-[15px] font-semibold text-[#252a33]"
+                            >
+                              Edit your presentation
+                            </h2>
+                            <p class="mt-0.5 text-[11px] text-[#929aa7]">
+                              Change the wording, structure, or formatting
+                            </p>
+                          </div>
+                          <TabsList
+                            class="flex h-9 gap-1 rounded-xl bg-[#f1f3f6] p-1"
+                            ><TabsTrigger
+                              class="flex cursor-pointer items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium text-[#78818d] data-[state=active]:bg-white data-[state=active]:text-[#252a33] data-[state=active]:shadow-sm"
+                              value="outline"
+                              ><Layers3 :size="15" />Outline
+                              <span class="text-[10px] text-[#9aa2ae]">{{
+                                outline.length
+                              }}</span></TabsTrigger
+                            ><TabsTrigger
+                              class="flex cursor-pointer items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium text-[#78818d] data-[state=active]:bg-white data-[state=active]:text-[#252a33] data-[state=active]:shadow-sm"
+                              value="slide"
+                              >Slide {{ selectedSlideIndex + 1 }}</TabsTrigger
+                            ><TabsTrigger
+                              class="flex cursor-pointer items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium text-[#78818d] data-[state=active]:bg-white data-[state=active]:text-[#252a33] data-[state=active]:shadow-sm"
+                              value="markdown"
+                              ><Code2 :size="15" />Full deck</TabsTrigger
+                            ></TabsList
+                          >
+                        </div>
+                        <TabsContent
+                          value="slide"
+                          class="flex min-h-0 flex-1 flex-col"
+                        >
+                          <div
+                            class="flex h-11 shrink-0 items-center justify-between border-b border-[#eef0f3] px-5 text-[11px] text-[#858e9b]"
+                          >
+                            <span>Slide {{ selectedSlideIndex + 1 }}</span>
+                            <strong
+                              class="truncate font-medium text-[#515966]"
+                              >{{ selectedSlide?.title }}</strong
+                            >
+                          </div>
+                          <MarkdownEditor
+                            :key="selectedSlideIndex"
+                            class="min-h-0 flex-1"
+                            :model-value="selectedSlide?.content || ''"
+                            :label="`Markdown for slide ${selectedSlideIndex + 1}`"
+                            @update:model-value="onSlideMarkdownInput"
+                          />
+                        </TabsContent>
+                        <TabsContent value="markdown" class="min-h-0 flex-1">
+                          <MarkdownEditor
+                            :model-value="markdown"
+                            label="Presentation content editor"
+                            @update:model-value="onMarkdownInput"
+                          />
+                        </TabsContent>
+                        <TabsContent
+                          value="outline"
+                          class="min-h-0 flex-1 overflow-y-auto p-4"
+                          ><button
+                            v-for="item in outline"
+                            :key="item.index"
+                            class="grid min-h-[58px] w-full cursor-pointer grid-cols-[40px_1fr_auto] items-center gap-2 rounded-xl px-3 text-left transition-[transform,background-color] duration-150 ease-snappy hover:bg-[#f5f7f9] active:scale-[.99] motion-reduce:transition-none"
+                            :class="{
+                              'bg-[#eef6ff]': selectedSlideIndex === item.index,
+                            }"
+                            @click="openSlide(item.index)"
+                          >
+                            <span class="text-[11px] text-[#9aa2ae]">{{
+                              String(item.index + 1).padStart(2, "0")
+                            }}</span
+                            ><strong
+                              class="text-[13px] font-medium text-[#444b56]"
+                              >{{ item.title }}</strong
+                            ><ArrowRight
+                              class="text-[#a1a8b3]"
+                              :size="15"
+                            /></button
+                        ></TabsContent>
+                        <footer
+                          class="shrink-0 border-t border-[#e9ecf0] bg-[#fbfcfd] p-3.5"
+                        >
+                          <UiAlert v-if="error" class="mb-3" compact>
+                            {{ error }}
+                          </UiAlert>
+                          <div
+                            class="flex flex-wrap items-end justify-between gap-3"
+                          >
+                            <label
+                              class="grid min-w-[145px] flex-1 gap-1.5 text-[11px] font-medium text-[#69717d]"
+                              >Voice<UiSelect
+                                v-model="config.tone"
+                                :options="toneOptions"
+                                size="sm"
+                                surface="plain"
+                            /></label>
+                            <div class="ml-auto text-right">
+                              <UiButton
+                                :disabled="status === 'generating'"
+                                @click="rewriteDeck"
+                              >
+                                <LoaderCircle
+                                  v-if="status === 'generating'"
+                                  class="animate-spin motion-reduce:animate-none"
+                                  :size="15"
+                                /><WandSparkles v-else :size="15" />{{
+                                  status === "generating"
+                                    ? "Rewriting…"
+                                    : "Rewrite"
+                                }}
+                              </UiButton>
+                            </div>
+                          </div>
+                        </footer>
+                      </TabsRoot>
+                    </section>
+                  </SplitterPanel>
+                  <SplitterResizeHandle
+                    class="group relative grid w-5 shrink-0 cursor-col-resize place-items-center outline-none max-[860px]:h-5 max-[860px]:w-full max-[860px]:cursor-row-resize"
+                  >
+                    <span
+                      class="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-[#d8dee7] transition-colors duration-150 group-data-[state=drag]:bg-accent group-focus-visible:bg-accent max-[860px]:inset-x-0 max-[860px]:top-1/2 max-[860px]:h-px max-[860px]:w-auto max-[860px]:-translate-y-1/2 max-[860px]:translate-x-0"
+                    ></span>
+                    <span
+                      class="relative grid h-9 w-4 place-items-center rounded-full border border-[#d8dee7] bg-white text-[#9aa2ae] shadow-sm transition-[border-color,color,transform] duration-150 group-hover:border-[#b9c2ce] group-hover:text-[#687281] group-data-[state=drag]:scale-105 group-data-[state=drag]:border-accent group-data-[state=drag]:text-accent group-focus-visible:border-accent group-focus-visible:text-accent max-[860px]:h-4 max-[860px]:w-9"
+                      ><GripVertical class="max-[860px]:rotate-90" :size="12"
+                    /></span>
+                  </SplitterResizeHandle>
+                  <SplitterPanel
+                    :default-size="58"
+                    :min-size="38"
+                    class="min-w-0 pl-2 pt-6 pb-6 pr-6"
+                  >
+                    <section
+                      class="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[22px] border border-[#d9dee6] bg-white shadow-lg"
+                    >
+                      <div
+                        class="flex h-16 shrink-0 items-center justify-between border-b border-[#e9ecf0] px-5"
+                      >
+                        <div class="flex items-center gap-3">
+                          <span
+                            class="grid size-9 place-items-center rounded-xl bg-[#eef6ff] text-accent"
+                            ><Play :size="16" fill="currentColor"
+                          /></span>
+                          <div>
+                            <h2
+                              class="text-[14px] font-semibold text-[#252a33]"
+                            >
+                              Presentation preview
+                            </h2>
+                            <small
+                              class="mt-0.5 block text-[11px] text-[#929aa7]"
+                              >Your live preview starts automatically</small
+                            >
+                          </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                          <UiButton
+                            v-if="preview.terminal.value.length"
+                            variant="icon"
+                            size="icon"
+                            aria-label="Show troubleshooting details"
+                            @click="showTerminal = !showTerminal"
+                          >
+                            <TerminalSquare :size="16" /></UiButton
+                          ><UiButton
+                            v-if="preview.status.value === 'error'"
+                            size="sm"
+                            @click="startPreview"
+                          >
+                            <RefreshCw :size="15" />Try again
+                          </UiButton>
+                        </div>
+                      </div>
+                      <div
+                        class="preview-grid relative min-h-0 flex-1 overflow-hidden"
+                      >
+                        <div
+                          v-if="preview.url.value"
+                          ref="previewShell"
+                          class="flex size-full min-h-0 flex-col overflow-hidden"
+                        >
+                          <m.div
+                            class="flex size-full min-h-0 flex-col overflow-hidden"
+                            :initial="
+                              prefersReducedMotion
+                                ? { opacity: 0 }
+                                : { opacity: 0, transform: 'scale(0.985)' }
+                            "
+                            :animate="{ opacity: 1, transform: 'scale(1)' }"
+                            :transition="quickSurfaceTransition"
+                          >
+                            <iframe
+                              ref="previewFrame"
+                              class="min-h-0 w-full flex-1 border-0 bg-white"
+                              :src="preview.url.value"
+                              title="Presentation preview"
+                              allow="fullscreen; screen-wake-lock"
+                              allowfullscreen
+                              @load="syncNativePreviewControls"
+                            ></iframe>
+                            <div
+                              class="flex h-12 shrink-0 items-center justify-between border-t border-[#e4e8ee] bg-white px-3 text-[#616a77]"
+                            >
+                              <span
+                                class="hidden min-w-0 items-center gap-2 px-2 text-[11px] font-medium sm:inline-flex"
+                                :class="{
+                                  'text-[#368567]':
+                                    preview.status.value === 'ready',
+                                  'text-[#aa5862]':
+                                    preview.status.value === 'error',
+                                }"
+                                ><span
+                                  class="size-1.5 shrink-0 rounded-full"
+                                  :class="
+                                    preview.status.value === 'ready'
+                                      ? 'bg-[#4db78c]'
+                                      : preview.status.value === 'error'
+                                        ? 'bg-[#d77983]'
+                                        : 'bg-[#a7aeb8]'
+                                  "
+                                ></span
+                                ><span class="truncate">{{
+                                  friendlyPreviewMessage
+                                }}</span></span
+                              >
+                              <div
+                                class="flex items-center gap-1 rounded-xl bg-[#f2f4f7] p-1"
+                              >
+                                <UiButton
+                                  variant="ghost"
+                                  size="compact"
+                                  aria-label="Previous slide"
+                                  @click="sendPreviewCommand('previous')"
+                                >
+                                  <ChevronLeft :size="16" />Previous
+                                </UiButton>
+                                <span
+                                  class="h-4 w-px bg-[#d9dee5]"
+                                  aria-hidden="true"
+                                ></span>
+                                <UiButton
+                                  variant="ghost"
+                                  size="compact"
+                                  aria-label="Next slide"
+                                  @click="sendPreviewCommand('next')"
+                                >
+                                  Next<ChevronRight :size="16" />
+                                </UiButton>
+                              </div>
+                              <UiButton
+                                variant="ghost"
+                                size="compact"
+                                class="px-2.5"
+                                :aria-label="
+                                  isPreviewFullscreen
+                                    ? 'Exit fullscreen'
+                                    : 'Enter fullscreen'
+                                "
+                                @click="togglePreviewFullscreen"
+                              >
+                                <Minimize2
+                                  v-if="isPreviewFullscreen"
+                                  :size="16"
+                                /><Maximize2 v-else :size="16" /><span
+                                  class="hidden sm:inline"
+                                  >{{
+                                    isPreviewFullscreen ? "Exit" : "Full screen"
+                                  }}</span
+                                >
+                              </UiButton>
+                            </div>
+                          </m.div>
+                        </div>
+                        <m.div
+                          v-else
+                          class="flex size-full min-h-[400px] flex-col items-center justify-center rounded-2xl border border-[#dfe4eb] bg-white/85 text-center backdrop-blur-sm"
+                          :initial="
+                            prefersReducedMotion
+                              ? { opacity: 0 }
+                              : { opacity: 0, transform: 'scale(0.985)' }
+                          "
+                          :animate="{ opacity: 1, transform: 'scale(1)' }"
+                          :transition="quickSurfaceTransition"
+                        >
+                          <div
+                            class="preview-illustration relative mb-7 h-[88px] w-[142px] rounded-xl border border-[#d9e0e9] bg-white shadow-[8px_9px_0_-3px_#eef2f7,8px_9px_0_-2px_#dfe5ed]"
+                          >
+                            <div></div>
+                            <span class="absolute right-4 bottom-4 text-accent"
+                              ><Play :size="25" fill="currentColor"
+                            /></span>
+                          </div>
+                          <h3 class="text-[16px] font-semibold text-[#303640]">
+                            {{
+                              isPreviewBusy
+                                ? "Preparing your presentation…"
+                                : "Ready when you are"
+                            }}
+                          </h3>
+                          <p
+                            class="mx-6 mt-2 mb-5 max-w-[390px] text-[13px] leading-relaxed text-[#818996]"
+                          >
+                            {{ friendlyPreviewMessage }}
+                          </p>
+                          <UiButton
+                            v-if="preview.status.value === 'error'"
+                            @click="startPreview"
+                          >
+                            <RefreshCw :size="16" />Try preview again
+                          </UiButton>
+                          <div
+                            v-else-if="isPreviewBusy"
+                            class="mt-3 h-1 w-[170px] overflow-hidden rounded-full bg-[#e2e7ee]"
+                          >
+                            <span
+                              class="preview-progress block h-full w-[42%] rounded-full bg-accent motion-reduce:animate-pulse"
+                            ></span>
+                          </div>
+                        </m.div>
+                        <AnimatePresence :initial="false">
+                          <m.div
+                            v-if="showTerminal"
+                            key="terminal"
+                            class="absolute right-8 bottom-8 left-8 max-h-[45%] overflow-hidden rounded-2xl border border-[#283448] bg-[#071426]/95 text-white shadow-[0_20px_55px_rgba(7,20,38,.28)]"
+                            :initial="
+                              prefersReducedMotion
+                                ? { opacity: 0 }
+                                : {
+                                    opacity: 0,
+                                    transform: 'translateY(10px) scale(0.985)',
+                                  }
+                            "
+                            :animate="{
+                              opacity: 1,
+                              transform: 'translateY(0px) scale(1)',
+                            }"
+                            :exit="
+                              prefersReducedMotion
+                                ? { opacity: 0 }
+                                : {
+                                    opacity: 0,
+                                    transform: 'translateY(6px) scale(0.99)',
+                                  }
+                            "
+                            :transition="quickSurfaceTransition"
+                          >
+                            <div
+                              class="flex h-10 items-center justify-between border-b border-white/10 px-3.5 text-[11px] text-white/60"
+                            >
+                              <span>Troubleshooting details</span
+                              ><button
+                                class="cursor-pointer transition-transform duration-150 active:scale-90"
+                                @click="showTerminal = false"
+                              >
+                                <X :size="15" />
+                              </button>
+                            </div>
+                            <pre
+                              class="m-0 max-h-[230px] overflow-auto p-4 font-mono text-[11px] leading-relaxed whitespace-pre-wrap text-white/70"
+                              >{{ preview.terminal.value.join("\n") }}</pre
+                            >
+                          </m.div>
+                        </AnimatePresence>
+                      </div>
+                    </section>
+                  </SplitterPanel>
+                </SplitterGroup>
+              </div>
+            </m.section>
+          </AnimatePresence>
+        </main>
+      </div>
+    </LazyMotion>
+  </MotionConfig>
 </template>
