@@ -990,9 +990,24 @@ function resetPdf() {
                       class="flex h-12 shrink-0 items-center justify-between border-t border-[#e4e8ee] bg-white px-3 text-[#616a77]"
                     >
                       <span
-                        class="hidden items-center gap-2 px-2 text-[11px] font-medium sm:inline-flex"
-                        ><span class="size-1.5 rounded-full bg-[#4db78c]"></span
-                        >Live preview</span
+                        class="hidden min-w-0 items-center gap-2 px-2 text-[11px] font-medium sm:inline-flex"
+                        :class="{
+                          'text-[#368567]': preview.status.value === 'ready',
+                          'text-[#aa5862]': preview.status.value === 'error',
+                        }"
+                        ><span
+                          class="size-1.5 shrink-0 rounded-full"
+                          :class="
+                            preview.status.value === 'ready'
+                              ? 'bg-[#4db78c]'
+                              : preview.status.value === 'error'
+                                ? 'bg-[#d77983]'
+                                : 'bg-[#a7aeb8]'
+                          "
+                        ></span
+                        ><span class="truncate">{{
+                          friendlyPreviewMessage
+                        }}</span></span
                       >
                       <div
                         class="flex items-center gap-1 rounded-xl bg-[#f2f4f7] p-1"
@@ -1100,25 +1115,6 @@ function resetPdf() {
                       >{{ preview.terminal.value.join("\n") }}</pre
                     >
                   </div>
-                </div>
-                <div
-                  class="flex h-9 items-center gap-2 border-t border-[#e9ecf0] px-4 text-[11px] text-[#89919d]"
-                  :class="{
-                    'text-[#368567]': preview.status.value === 'ready',
-                    'text-[#aa5862]': preview.status.value === 'error',
-                  }"
-                >
-                  <span
-                    class="size-1.5 rounded-full"
-                    :class="
-                      preview.status.value === 'ready'
-                        ? 'bg-[#4db78c]'
-                        : preview.status.value === 'error'
-                          ? 'bg-[#d77983]'
-                          : 'bg-[#a7aeb8]'
-                    "
-                  ></span
-                  >{{ friendlyPreviewMessage }}
                 </div>
               </section>
             </SplitterPanel>
