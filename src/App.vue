@@ -7,8 +7,16 @@ import {
   ref,
   watch,
 } from "vue";
-import { useDebounceFn, useDropZone, useFileDialog } from "@vueuse/core";
 import {
+  useDebounceFn,
+  useDropZone,
+  useFileDialog,
+  useMediaQuery,
+} from "@vueuse/core";
+import {
+  SplitterGroup,
+  SplitterPanel,
+  SplitterResizeHandle,
   SwitchRoot,
   SwitchThumb,
   TabsContent,
@@ -28,6 +36,7 @@ import {
   FileArchive,
   FileDown,
   FileText,
+  GripVertical,
   Layers3,
   LoaderCircle,
   Maximize2,
@@ -85,6 +94,7 @@ const hasManualEdits = ref(false);
 const previewFrame = ref<HTMLIFrameElement>();
 const previewShell = ref<HTMLElement>();
 const isPreviewFullscreen = ref(false);
+const isNarrowWorkspace = useMediaQuery("(max-width: 860px)");
 
 const preview = useVercelPreview();
 const outline = computed(() =>
@@ -330,7 +340,7 @@ function resetPdf() {
 
 <template>
   <div class="min-h-screen bg-canvas text-ink">
-    <header class="h-[72px] border-b border-white/10 bg-navy text-white">
+    <header class="h-18 border-b border-white/10 bg-navy text-white">
       <div
         class="mx-auto flex h-full max-w-[1600px] items-center justify-between px-8 max-[720px]:px-4"
       >
@@ -359,7 +369,7 @@ function resetPdf() {
           >
           <span
             v-else
-            class="hidden max-w-[260px] items-center gap-2 truncate rounded-full border border-white/12 bg-white/[.07] px-3 py-2 text-[12px] text-white/70 lg:inline-flex"
+            class="hidden max-w-65 items-center gap-2 truncate rounded-full border border-white/12 bg-white/[.07] px-3 py-2 text-[12px] text-white/70 lg:inline-flex"
             ><FileText :size="14" />{{ pdf.fileName
             }}<button
               class="grid cursor-pointer place-items-center text-white/50 transition-transform duration-150 ease-snappy active:scale-90 motion-reduce:transition-none"
@@ -393,7 +403,7 @@ function resetPdf() {
         v-if="!pdf"
         class="upload-gradient flex min-h-full flex-col items-center px-6 py-12 text-center text-white max-[720px]:px-4"
       >
-        <div class="max-w-[840px]">
+        <div class="max-w-210">
           <div
             class="mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[.07] px-4 py-2 text-[11px] font-semibold tracking-[0.12em] text-white/75 uppercase backdrop-blur-xl"
           >
@@ -407,7 +417,7 @@ function resetPdf() {
             >
           </h1>
           <p
-            class="mx-auto mt-5 max-w-[680px] text-[17px] leading-[1.65] text-white/65"
+            class="mx-auto mt-5 max-w-170 text-[17px] leading-[1.65] text-white/65"
           >
             Upload a report, proposal, or guide. Decksmith finds the narrative
             and turns it into a presentation you can shape and share.
@@ -417,7 +427,7 @@ function resetPdf() {
         <button
           ref="dropZone"
           type="button"
-          class="mt-9 flex min-h-[215px] w-full max-w-[650px] cursor-pointer flex-col items-center justify-center rounded-[26px] border border-white/70 bg-white p-8 text-[#151a24] shadow-[0_24px_70px_rgba(2,21,61,.28),0_2px_8px_rgba(2,21,61,.12)] transition-transform duration-150 ease-snappy hover:-translate-y-0.5 active:scale-[.99] motion-reduce:transform-none motion-reduce:transition-none"
+          class="mt-9 flex min-h-53.75 w-full max-w-162.5 cursor-pointer flex-col items-center justify-center rounded-[26px] border border-white/70 bg-white p-8 text-[#151a24] shadow-[0_24px_70px_rgba(2,21,61,.28),0_2px_8px_rgba(2,21,61,.12)] transition-transform duration-150 ease-snappy hover:-translate-y-0.5 active:scale-[.99] motion-reduce:transform-none motion-reduce:transition-none"
           :class="{ '-translate-y-1 ring-4 ring-white/25': isDraggingOver }"
           @click="openFileDialog()"
         >
@@ -451,11 +461,11 @@ function resetPdf() {
         </div>
 
         <div
-          class="mt-9 grid w-full max-w-[900px] grid-cols-3 border-t border-white/12 pt-7 text-left max-[720px]:grid-cols-1 max-[720px]:gap-4"
+          class="mt-9 grid w-full max-w-225 grid-cols-3 border-t border-white/12 pt-7 text-left max-[720px]:grid-cols-1 max-[720px]:gap-4"
         >
           <div class="flex items-center justify-center gap-3">
             <span
-              class="grid size-10 place-items-center rounded-xl bg-white/[.08] text-[#b9ddff]"
+              class="grid size-10 place-items-center rounded-xl bg-white/8 text-[#b9ddff]"
               ><FileText :size="19" /></span
             ><span
               ><strong class="block text-[13px] font-medium text-white/85"
@@ -467,7 +477,7 @@ function resetPdf() {
           </div>
           <div class="flex items-center justify-center gap-3">
             <span
-              class="grid size-10 place-items-center rounded-xl bg-white/[.08] text-[#b9ddff]"
+              class="grid size-10 place-items-center rounded-xl bg-white/8 text-[#b9ddff]"
               ><WandSparkles :size="19" /></span
             ><span
               ><strong class="block text-[13px] font-medium text-white/85"
@@ -479,7 +489,7 @@ function resetPdf() {
           </div>
           <div class="flex items-center justify-center gap-3">
             <span
-              class="grid size-10 place-items-center rounded-xl bg-white/[.08] text-[#b9ddff]"
+              class="grid size-10 place-items-center rounded-xl bg-white/8 text-[#b9ddff]"
               ><Layers3 :size="19" /></span
             ><span
               ><strong class="block text-[13px] font-medium text-white/85"
@@ -494,9 +504,9 @@ function resetPdf() {
 
       <section
         v-else-if="!markdown"
-        class="min-h-full bg-[#f7f9fc] bg-[radial-gradient(#dce2ea_1px,transparent_1px)] bg-[length:16px_16px] px-5 py-9 max-[720px]:px-3 max-[720px]:py-5"
+        class="min-h-full bg-[#f7f9fc] bg-[radial-gradient(#dce2ea_1px,transparent_1px)] bg-size-[16px_16px] px-5 py-9 max-[720px]:px-3 max-[720px]:py-5"
       >
-        <div class="mx-auto max-w-[920px]">
+        <div class="mx-auto max-w-230">
           <div class="mb-7 flex flex-wrap items-end justify-between gap-5">
             <div>
               <span
@@ -504,22 +514,22 @@ function resetPdf() {
                 >Create your first draft</span
               >
               <h1
-                class="mt-2 text-[clamp(30px,4vw,48px)] leading-[1.08] font-normal tracking-[-0.045em] text-[#171a21]"
+                class="mt-2 text-[clamp(30px,4vw,48px)] leading-[1.08] font-normal tracking-[-0.045em] text-ink"
               >
                 How should Decksmith tell the story?
               </h1>
               <p
-                class="mt-3 max-w-[650px] text-[15px] leading-relaxed text-[#747d8a]"
+                class="mt-3 max-w-162.5 text-[15px] leading-relaxed text-[#747d8a]"
               >
                 Choose the voice and level of detail now. You’ll design the
                 presentation alongside its live preview next.
               </p>
             </div>
             <article
-              class="flex min-w-[330px] items-center gap-3 rounded-2xl border border-[#e0e5eb] bg-white p-3 pr-4 shadow-card max-[520px]:min-w-0 max-[520px]:w-full"
+              class="flex min-w-82.5 items-center gap-3 rounded-2xl border border-[#e0e5eb] bg-white p-3 pr-4 shadow-card max-[520px]:min-w-0 max-[520px]:w-full"
             >
               <div
-                class="grid h-[62px] w-[48px] shrink-0 place-items-center overflow-hidden rounded-lg border border-[#e4e8ee] bg-[#f0f3f7] text-[#87909e]"
+                class="grid h-15.5 w-12 shrink-0 place-items-center overflow-hidden rounded-lg border border-[#e4e8ee] bg-[#f0f3f7] text-[#87909e]"
               >
                 <img
                   v-if="coverDataUrl"
@@ -552,7 +562,7 @@ function resetPdf() {
           </div>
 
           <article
-            class="rounded-[24px] border border-[#e0e5eb] bg-white p-6 shadow-card max-[620px]:p-5"
+            class="rounded-3xl border border-[#e0e5eb] bg-white p-6 shadow-card max-[620px]:p-5"
           >
             <label class="grid gap-2 text-[12px] font-medium text-[#5d6572]"
               >Presentation title<input
@@ -613,7 +623,7 @@ function resetPdf() {
                   ></span
                 ><SwitchRoot
                   v-model="config.includeNotes"
-                  class="relative h-[22px] w-[38px] cursor-pointer rounded-full bg-[#ccd2db] p-[3px] transition-colors duration-150 data-[state=checked]:bg-accent"
+                  class="relative h-5.5 w-9.5 cursor-pointer rounded-full bg-[#ccd2db] p-0.75 transition-colors duration-150 data-[state=checked]:bg-accent"
                   ><SwitchThumb
                     class="block size-4 rounded-full bg-white shadow-sm transition-transform duration-150 data-[state=checked]:translate-x-4"
                 /></SwitchRoot>
@@ -629,7 +639,7 @@ function resetPdf() {
                   ></span
                 ><SwitchRoot
                   v-model="config.preserveSourceReferences"
-                  class="relative h-[22px] w-[38px] cursor-pointer rounded-full bg-[#ccd2db] p-[3px] transition-colors duration-150 data-[state=checked]:bg-accent"
+                  class="relative h-5.5 w-9.5 cursor-pointer rounded-full bg-[#ccd2db] p-0.75 transition-colors duration-150 data-[state=checked]:bg-accent"
                   ><SwitchThumb
                     class="block size-4 rounded-full bg-white shadow-sm transition-transform duration-150 data-[state=checked]:translate-x-4"
                 /></SwitchRoot>
@@ -666,311 +676,345 @@ function resetPdf() {
 
       <section
         v-else
-        class="min-h-full bg-[#f7f9fc] bg-[radial-gradient(#dce2ea_1px,transparent_1px)] bg-[length:16px_16px] px-5 py-6 max-[720px]:px-3 max-[720px]:py-4"
+        class="min-h-full bg-[#f7f9fc] bg-[radial-gradient(#dce2ea_1px,transparent_1px)] bg-size-[16px_16px] px-5 py-6 max-[720px]:px-3 max-[720px]:py-4"
       >
         <div class="mx-auto">
-          <div
-            class="grid min-h-[650px] grid-cols-[minmax(340px,.82fr)_minmax(440px,1.18fr)_320px] gap-5 max-[1240px]:grid-cols-2 max-[860px]:grid-cols-1"
+          <ThemeStudio
+            v-model:variant="config.variant"
+            v-model:accent="config.accent"
+            v-model:atmosphere="config.atmosphere"
+            v-model:logo="config.logo"
+            v-model:logo-invert="config.logoInvert"
+            class="mb-5"
+          />
+          <SplitterGroup
+            :direction="isNarrowWorkspace ? 'vertical' : 'horizontal'"
+            :auto-save-id="
+              isNarrowWorkspace
+                ? 'decksmith-workspace-vertical'
+                : 'decksmith-workspace-horizontal'
+            "
+            class="h-[650px] min-h-[650px] w-full max-[860px]:h-[1200px] max-[860px]:min-h-0"
           >
-            <section
-              class="flex min-h-[560px] min-w-0 flex-col overflow-hidden rounded-[22px] border border-[#e1e5eb] bg-white shadow-card"
+            <SplitterPanel
+              :default-size="42"
+              :min-size="28"
+              class="min-w-0 pr-2.5 max-[860px]:pr-0 max-[860px]:pb-2.5"
             >
-              <TabsRoot v-model="editorTab" class="flex h-full flex-col">
+              <section
+                class="flex h-full min-h-[560px] min-w-0 flex-col overflow-hidden rounded-[22px] border border-[#e1e5eb] bg-white shadow-card"
+              >
+                <TabsRoot v-model="editorTab" class="flex h-full flex-col">
+                  <div
+                    class="flex h-16 shrink-0 items-center justify-between border-b border-[#e9ecf0] px-5"
+                  >
+                    <div>
+                      <h2 class="text-[15px] font-semibold text-[#252a33]">
+                        Edit your presentation
+                      </h2>
+                      <p class="mt-0.5 text-[11px] text-[#929aa7]">
+                        Change the wording, structure, or formatting
+                      </p>
+                    </div>
+                    <TabsList class="flex h-9 gap-1 rounded-xl bg-[#f1f3f6] p-1"
+                      ><TabsTrigger
+                        class="flex cursor-pointer items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium text-[#78818d] data-[state=active]:bg-white data-[state=active]:text-[#252a33] data-[state=active]:shadow-sm"
+                        value="markdown"
+                        ><Code2 :size="15" />Content</TabsTrigger
+                      ><TabsTrigger
+                        class="flex cursor-pointer items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium text-[#78818d] data-[state=active]:bg-white data-[state=active]:text-[#252a33] data-[state=active]:shadow-sm"
+                        value="outline"
+                        ><Layers3 :size="15" />Outline
+                        <span class="text-[10px] text-[#9aa2ae]">{{
+                          outline.length
+                        }}</span></TabsTrigger
+                      ></TabsList
+                    >
+                  </div>
+                  <TabsContent value="markdown" class="min-h-0 flex-1">
+                    <textarea
+                      class="size-full resize-none border-0 bg-white px-6 py-5 font-mono text-[13px] leading-[1.8] text-[#434a55] caret-accent outline-0"
+                      :value="markdown"
+                      spellcheck="false"
+                      aria-label="Presentation content editor"
+                      @input="onMarkdownInput"
+                    ></textarea>
+                  </TabsContent>
+                  <TabsContent
+                    value="outline"
+                    class="flex-1 overflow-y-auto p-4"
+                    ><button
+                      v-for="item in outline"
+                      :key="item.index"
+                      class="grid min-h-[58px] w-full cursor-pointer grid-cols-[40px_1fr_auto] items-center gap-2 rounded-xl px-3 text-left transition-[transform,background-color] duration-150 ease-snappy hover:bg-[#f5f7f9] active:scale-[.99] motion-reduce:transition-none"
+                    >
+                      <span class="text-[11px] text-[#9aa2ae]">{{
+                        String(item.index + 1).padStart(2, "0")
+                      }}</span
+                      ><strong class="text-[13px] font-medium text-[#444b56]">{{
+                        item.title
+                      }}</strong
+                      ><ArrowRight class="text-[#a1a8b3]" :size="15" /></button
+                  ></TabsContent>
+                  <footer
+                    class="shrink-0 border-t border-[#e9ecf0] bg-[#fbfcfd] p-3.5"
+                  >
+                    <div
+                      v-if="error"
+                      class="mb-3 flex items-start gap-2 rounded-xl border border-[#f0c9ce] bg-[#fff6f7] px-3 py-2.5 text-[11px] leading-relaxed text-[#a94b57]"
+                    >
+                      <CircleAlert class="mt-0.5 shrink-0" :size="14" />{{
+                        error
+                      }}
+                    </div>
+                    <div class="flex flex-wrap items-end justify-between gap-3">
+                      <label
+                        class="grid min-w-[145px] flex-1 gap-1.5 text-[11px] font-medium text-[#69717d]"
+                        >Voice<span class="relative"
+                          ><select
+                            v-model="config.tone"
+                            class="h-10 w-full appearance-none rounded-xl border border-[#dfe3e9] bg-white px-3 pr-8 text-[12px] font-normal text-[#252a33]"
+                          >
+                            <option value="executive">Professional</option>
+                            <option value="educational">Teaching</option>
+                            <option value="persuasive">Persuasive</option>
+                            <option value="conversational">
+                              Friendly
+                            </option></select
+                          ><ChevronDown
+                            class="pointer-events-none absolute top-3 right-2.5 text-[#9aa2ae]"
+                            :size="14" /></span
+                      ></label>
+                      <div class="ml-auto text-right">
+                        <small class="mb-1.5 block text-[10px] text-[#929aa7]"
+                          >Rewrites from the original PDF</small
+                        >
+                        <button
+                          class="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-accent px-4 text-[12px] font-semibold text-white shadow-[0_7px_18px_rgba(15,124,255,.22)] transition-transform duration-150 ease-snappy active:scale-[.97] disabled:cursor-not-allowed disabled:opacity-50"
+                          type="button"
+                          :disabled="status === 'generating'"
+                          @click="rewriteDeck"
+                        >
+                          <LoaderCircle
+                            v-if="status === 'generating'"
+                            class="animate-spin motion-reduce:animate-none"
+                            :size="15"
+                          /><WandSparkles v-else :size="15" />{{
+                            status === "generating" ? "Rewriting…" : "Rewrite"
+                          }}
+                        </button>
+                      </div>
+                    </div>
+                  </footer>
+                </TabsRoot>
+              </section>
+            </SplitterPanel>
+            <SplitterResizeHandle
+              class="group relative grid w-5 shrink-0 cursor-col-resize place-items-center outline-none max-[860px]:h-5 max-[860px]:w-full max-[860px]:cursor-row-resize"
+            >
+              <span
+                class="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-[#d8dee7] transition-colors duration-150 group-data-[state=drag]:bg-accent group-focus-visible:bg-accent max-[860px]:inset-x-0 max-[860px]:top-1/2 max-[860px]:h-px max-[860px]:w-auto max-[860px]:-translate-y-1/2 max-[860px]:translate-x-0"
+              ></span>
+              <span
+                class="relative grid h-9 w-4 place-items-center rounded-full border border-[#d8dee7] bg-white text-[#9aa2ae] shadow-sm transition-[border-color,color,transform] duration-150 group-hover:border-[#b9c2ce] group-hover:text-[#687281] group-data-[state=drag]:scale-105 group-data-[state=drag]:border-accent group-data-[state=drag]:text-accent group-focus-visible:border-accent group-focus-visible:text-accent max-[860px]:h-4 max-[860px]:w-9"
+                ><GripVertical class="max-[860px]:rotate-90" :size="12"
+              /></span>
+            </SplitterResizeHandle>
+            <SplitterPanel
+              :default-size="58"
+              :min-size="38"
+              class="min-w-0 pl-2.5 max-[860px]:pt-2.5 max-[860px]:pl-0"
+            >
+              <section
+                class="flex h-full min-h-[560px] min-w-0 flex-col overflow-hidden rounded-[22px] border border-[#d9dee6] bg-white shadow-[0_18px_55px_rgba(24,39,75,.12)]"
+              >
                 <div
                   class="flex h-16 shrink-0 items-center justify-between border-b border-[#e9ecf0] px-5"
                 >
-                  <div>
-                    <h2 class="text-[15px] font-semibold text-[#252a33]">
-                      Edit your presentation
-                    </h2>
-                    <p class="mt-0.5 text-[11px] text-[#929aa7]">
-                      Change the wording, structure, or formatting
-                    </p>
-                  </div>
-                  <TabsList class="flex h-9 gap-1 rounded-xl bg-[#f1f3f6] p-1"
-                    ><TabsTrigger
-                      class="flex cursor-pointer items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium text-[#78818d] data-[state=active]:bg-white data-[state=active]:text-[#252a33] data-[state=active]:shadow-sm"
-                      value="markdown"
-                      ><Code2 :size="15" />Content</TabsTrigger
-                    ><TabsTrigger
-                      class="flex cursor-pointer items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium text-[#78818d] data-[state=active]:bg-white data-[state=active]:text-[#252a33] data-[state=active]:shadow-sm"
-                      value="outline"
-                      ><Layers3 :size="15" />Outline
-                      <span class="text-[10px] text-[#9aa2ae]">{{
-                        outline.length
-                      }}</span></TabsTrigger
-                    ></TabsList
-                  >
-                </div>
-                <TabsContent value="markdown" class="min-h-0 flex-1">
-                  <textarea
-                    class="size-full resize-none border-0 bg-white px-6 py-5 font-mono text-[13px] leading-[1.8] text-[#434a55] caret-accent outline-0"
-                    :value="markdown"
-                    spellcheck="false"
-                    aria-label="Presentation content editor"
-                    @input="onMarkdownInput"
-                  ></textarea>
-                </TabsContent>
-                <TabsContent value="outline" class="flex-1 overflow-y-auto p-4"
-                  ><button
-                    v-for="item in outline"
-                    :key="item.index"
-                    class="grid min-h-[58px] w-full cursor-pointer grid-cols-[40px_1fr_auto] items-center gap-2 rounded-xl px-3 text-left transition-[transform,background-color] duration-150 ease-snappy hover:bg-[#f5f7f9] active:scale-[.99] motion-reduce:transition-none"
-                  >
-                    <span class="text-[11px] text-[#9aa2ae]">{{
-                      String(item.index + 1).padStart(2, "0")
-                    }}</span
-                    ><strong class="text-[13px] font-medium text-[#444b56]">{{
-                      item.title
-                    }}</strong
-                    ><ArrowRight class="text-[#a1a8b3]" :size="15" /></button
-                ></TabsContent>
-                <footer
-                  class="shrink-0 border-t border-[#e9ecf0] bg-[#fbfcfd] p-3.5"
-                >
-                  <div
-                    v-if="error"
-                    class="mb-3 flex items-start gap-2 rounded-xl border border-[#f0c9ce] bg-[#fff6f7] px-3 py-2.5 text-[11px] leading-relaxed text-[#a94b57]"
-                  >
-                    <CircleAlert class="mt-0.5 shrink-0" :size="14" />{{ error }}
-                  </div>
-                  <div class="flex flex-wrap items-end justify-between gap-3">
-                    <label
-                      class="grid min-w-[145px] flex-1 gap-1.5 text-[11px] font-medium text-[#69717d]"
-                      >Voice<span class="relative"
-                        ><select
-                          v-model="config.tone"
-                          class="h-10 w-full appearance-none rounded-xl border border-[#dfe3e9] bg-white px-3 pr-8 text-[12px] font-normal text-[#252a33]"
-                        >
-                          <option value="executive">Professional</option>
-                          <option value="educational">Teaching</option>
-                          <option value="persuasive">Persuasive</option>
-                          <option value="conversational">Friendly</option></select
-                        ><ChevronDown
-                          class="pointer-events-none absolute top-3 right-2.5 text-[#9aa2ae]"
-                          :size="14" /></span
-                    ></label>
-                    <div class="ml-auto text-right">
-                      <small class="mb-1.5 block text-[10px] text-[#929aa7]"
-                        >Rewrites from the original PDF</small
-                      >
-                      <button
-                        class="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-accent px-4 text-[12px] font-semibold text-white shadow-[0_7px_18px_rgba(15,124,255,.22)] transition-transform duration-150 ease-snappy active:scale-[.97] disabled:cursor-not-allowed disabled:opacity-50"
-                        type="button"
-                        :disabled="status === 'generating'"
-                        @click="rewriteDeck"
-                      >
-                        <LoaderCircle
-                          v-if="status === 'generating'"
-                          class="animate-spin motion-reduce:animate-none"
-                          :size="15"
-                        /><WandSparkles v-else :size="15" />{{
-                          status === "generating" ? "Rewriting…" : "Rewrite"
-                        }}
-                      </button>
-                    </div>
-                  </div>
-                </footer>
-              </TabsRoot>
-            </section>
-
-            <section
-              class="flex min-h-[560px] min-w-0 flex-col overflow-hidden rounded-[22px] border border-[#d9dee6] bg-white shadow-[0_18px_55px_rgba(24,39,75,.12)]"
-            >
-              <div
-                class="flex h-16 shrink-0 items-center justify-between border-b border-[#e9ecf0] px-5"
-              >
-                <div class="flex items-center gap-3">
-                  <span
-                    class="grid size-9 place-items-center rounded-xl bg-[#eef6ff] text-accent"
-                    ><Play :size="16" fill="currentColor" /></span
-                  ><span
-                    ><strong
-                      class="block text-[14px] font-semibold text-[#252a33]"
-                      >Presentation preview</strong
-                    ><small class="mt-0.5 block text-[11px] text-[#929aa7]"
-                      >Your live preview starts automatically</small
-                    ></span
-                  >
-                </div>
-                <div class="flex items-center gap-2">
-                  <button
-                    v-if="preview.terminal.value.length"
-                    class="grid size-9 cursor-pointer place-items-center rounded-xl border border-[#dfe3e9] bg-white text-[#838b98] transition-transform duration-150 ease-snappy active:scale-[.95]"
-                    aria-label="Show troubleshooting details"
-                    @click="showTerminal = !showTerminal"
-                  >
-                    <TerminalSquare :size="16" /></button
-                  ><button
-                    v-if="preview.status.value === 'error'"
-                    class="inline-flex h-9 cursor-pointer items-center gap-2 rounded-xl bg-accent px-3.5 text-[12px] font-semibold text-white shadow-[0_7px_18px_rgba(15,124,255,.22)] transition-transform duration-150 ease-snappy active:scale-[.97]"
-                    @click="startPreview"
-                  >
-                    <RefreshCw :size="15" />Try again
-                  </button>
-                </div>
-              </div>
-              <div
-                class="preview-grid relative min-h-0 flex-1 overflow-hidden p-[clamp(18px,2.5vw,34px)]"
-              >
-                <div
-                  v-if="preview.url.value"
-                  ref="previewShell"
-                  class="flex size-full min-h-0 flex-col overflow-hidden rounded-2xl border border-[#d9dee6] bg-white shadow-[0_14px_38px_rgba(29,46,79,.16)]"
-                >
-                  <iframe
-                    ref="previewFrame"
-                    class="min-h-0 w-full flex-1 border-0 bg-white"
-                    :src="preview.url.value"
-                    title="Presentation preview"
-                    allow="fullscreen; screen-wake-lock"
-                    allowfullscreen
-                    @load="syncNativePreviewControls"
-                  ></iframe>
-                  <div
-                    class="flex h-12 shrink-0 items-center justify-between border-t border-[#e4e8ee] bg-white px-3 text-[#616a77]"
-                  >
+                  <div class="flex items-center gap-3">
                     <span
-                      class="hidden items-center gap-2 px-2 text-[11px] font-medium sm:inline-flex"
-                      ><span class="size-1.5 rounded-full bg-[#4db78c]"></span
-                      >Live preview</span
+                      class="grid size-9 place-items-center rounded-xl bg-[#eef6ff] text-accent"
+                      ><Play :size="16" fill="currentColor" /></span
+                    ><span
+                      ><strong
+                        class="block text-[14px] font-semibold text-[#252a33]"
+                        >Presentation preview</strong
+                      ><small class="mt-0.5 block text-[11px] text-[#929aa7]"
+                        >Your live preview starts automatically</small
+                      ></span
                     >
-                    <div
-                      class="flex items-center gap-1 rounded-xl bg-[#f2f4f7] p-1"
-                    >
-                      <button
-                        class="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium transition-[transform,background-color,color,box-shadow] duration-150 ease-snappy hover:bg-white hover:text-[#252a33] hover:shadow-sm active:scale-[.96]"
-                        type="button"
-                        aria-label="Previous slide"
-                        @click="sendPreviewCommand('previous')"
-                      >
-                        <ChevronLeft :size="16" />Previous
-                      </button>
-                      <span
-                        class="h-4 w-px bg-[#d9dee5]"
-                        aria-hidden="true"
-                      ></span>
-                      <button
-                        class="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium transition-[transform,background-color,color,box-shadow] duration-150 ease-snappy hover:bg-white hover:text-[#252a33] hover:shadow-sm active:scale-[.96]"
-                        type="button"
-                        aria-label="Next slide"
-                        @click="sendPreviewCommand('next')"
-                      >
-                        Next<ChevronRight :size="16" />
-                      </button>
-                    </div>
+                  </div>
+                  <div class="flex items-center gap-2">
                     <button
-                      class="inline-flex h-8 cursor-pointer items-center gap-2 rounded-lg px-2.5 text-[12px] font-medium transition-[transform,background-color,color] duration-150 ease-snappy hover:bg-[#f2f4f7] hover:text-[#252a33] active:scale-[.96]"
-                      type="button"
-                      :aria-label="
-                        isPreviewFullscreen
-                          ? 'Exit fullscreen'
-                          : 'Enter fullscreen'
-                      "
-                      @click="togglePreviewFullscreen"
+                      v-if="preview.terminal.value.length"
+                      class="grid size-9 cursor-pointer place-items-center rounded-xl border border-[#dfe3e9] bg-white text-[#838b98] transition-transform duration-150 ease-snappy active:scale-[.95]"
+                      aria-label="Show troubleshooting details"
+                      @click="showTerminal = !showTerminal"
                     >
-                      <Minimize2
-                        v-if="isPreviewFullscreen"
-                        :size="16"
-                      /><Maximize2 v-else :size="16" /><span
-                        class="hidden sm:inline"
-                        >{{
-                          isPreviewFullscreen ? "Exit" : "Full screen"
-                        }}</span
-                      >
-                    </button>
-                  </div>
-                </div>
-                <div
-                  v-else
-                  class="flex size-full min-h-[400px] flex-col items-center justify-center rounded-2xl border border-[#dfe4eb] bg-white/85 text-center backdrop-blur-sm"
-                >
-                  <div
-                    class="preview-illustration relative mb-7 h-[88px] w-[142px] rounded-xl border border-[#d9e0e9] bg-white shadow-[8px_9px_0_-3px_#eef2f7,8px_9px_0_-2px_#dfe5ed]"
-                  >
-                    <div></div>
-                    <span class="absolute right-4 bottom-4 text-accent"
-                      ><Play :size="25" fill="currentColor"
-                    /></span>
-                  </div>
-                  <h3 class="text-[16px] font-semibold text-[#303640]">
-                    {{
-                      isPreviewBusy
-                        ? "Preparing your presentation…"
-                        : "Ready when you are"
-                    }}
-                  </h3>
-                  <p
-                    class="mx-6 mt-2 mb-5 max-w-[390px] text-[13px] leading-relaxed text-[#818996]"
-                  >
-                    {{ friendlyPreviewMessage }}
-                  </p>
-                  <button
-                    v-if="preview.status.value === 'error'"
-                    class="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-accent px-4 text-[13px] font-semibold text-white shadow-[0_8px_20px_rgba(15,124,255,.24)] transition-transform duration-150 ease-snappy active:scale-[.97]"
-                    @click="startPreview"
-                  >
-                    <RefreshCw :size="16" />Try preview again
-                  </button>
-                  <div
-                    v-else-if="isPreviewBusy"
-                    class="mt-3 h-1 w-[170px] overflow-hidden rounded-full bg-[#e2e7ee]"
-                  >
-                    <span
-                      class="preview-progress block h-full w-[42%] rounded-full bg-accent motion-reduce:animate-pulse"
-                    ></span>
-                  </div>
-                </div>
-                <div
-                  v-if="showTerminal"
-                  class="absolute right-8 bottom-8 left-8 max-h-[45%] overflow-hidden rounded-2xl border border-[#283448] bg-[#071426]/95 text-white shadow-[0_20px_55px_rgba(7,20,38,.28)]"
-                >
-                  <div
-                    class="flex h-10 items-center justify-between border-b border-white/10 px-3.5 text-[11px] text-white/60"
-                  >
-                    <span>Troubleshooting details</span
+                      <TerminalSquare :size="16" /></button
                     ><button
-                      class="cursor-pointer transition-transform duration-150 active:scale-90"
-                      @click="showTerminal = false"
+                      v-if="preview.status.value === 'error'"
+                      class="inline-flex h-9 cursor-pointer items-center gap-2 rounded-xl bg-accent px-3.5 text-[12px] font-semibold text-white shadow-[0_7px_18px_rgba(15,124,255,.22)] transition-transform duration-150 ease-snappy active:scale-[.97]"
+                      @click="startPreview"
                     >
-                      <X :size="15" />
+                      <RefreshCw :size="15" />Try again
                     </button>
                   </div>
-                  <pre
-                    class="m-0 max-h-[230px] overflow-auto p-4 font-mono text-[11px] leading-relaxed whitespace-pre-wrap text-white/70"
-                    >{{ preview.terminal.value.join("\n") }}</pre
-                  >
                 </div>
-              </div>
-              <div
-                class="flex h-9 items-center gap-2 border-t border-[#e9ecf0] px-4 text-[11px] text-[#89919d]"
-                :class="{
-                  'text-[#368567]': preview.status.value === 'ready',
-                  'text-[#aa5862]': preview.status.value === 'error',
-                }"
-              >
-                <span
-                  class="size-1.5 rounded-full"
-                  :class="
-                    preview.status.value === 'ready'
-                      ? 'bg-[#4db78c]'
-                      : preview.status.value === 'error'
-                        ? 'bg-[#d77983]'
-                        : 'bg-[#a7aeb8]'
-                  "
-                ></span
-                >{{ friendlyPreviewMessage }}
-              </div>
-            </section>
-            <ThemeStudio
-              v-model:variant="config.variant"
-              v-model:accent="config.accent"
-              v-model:atmosphere="config.atmosphere"
-              v-model:logo="config.logo"
-              v-model:logo-invert="config.logoInvert"
-              class="max-[1240px]:col-span-2 max-[860px]:col-span-1"
-            />
-          </div>
+                <div
+                  class="preview-grid relative min-h-0 flex-1 overflow-hidden p-[clamp(18px,2.5vw,34px)]"
+                >
+                  <div
+                    v-if="preview.url.value"
+                    ref="previewShell"
+                    class="flex size-full min-h-0 flex-col overflow-hidden rounded-2xl border border-[#d9dee6] bg-white shadow-[0_14px_38px_rgba(29,46,79,.16)]"
+                  >
+                    <iframe
+                      ref="previewFrame"
+                      class="min-h-0 w-full flex-1 border-0 bg-white"
+                      :src="preview.url.value"
+                      title="Presentation preview"
+                      allow="fullscreen; screen-wake-lock"
+                      allowfullscreen
+                      @load="syncNativePreviewControls"
+                    ></iframe>
+                    <div
+                      class="flex h-12 shrink-0 items-center justify-between border-t border-[#e4e8ee] bg-white px-3 text-[#616a77]"
+                    >
+                      <span
+                        class="hidden items-center gap-2 px-2 text-[11px] font-medium sm:inline-flex"
+                        ><span class="size-1.5 rounded-full bg-[#4db78c]"></span
+                        >Live preview</span
+                      >
+                      <div
+                        class="flex items-center gap-1 rounded-xl bg-[#f2f4f7] p-1"
+                      >
+                        <button
+                          class="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium transition-[transform,background-color,color,box-shadow] duration-150 ease-snappy hover:bg-white hover:text-[#252a33] hover:shadow-sm active:scale-[.96]"
+                          type="button"
+                          aria-label="Previous slide"
+                          @click="sendPreviewCommand('previous')"
+                        >
+                          <ChevronLeft :size="16" />Previous
+                        </button>
+                        <span
+                          class="h-4 w-px bg-[#d9dee5]"
+                          aria-hidden="true"
+                        ></span>
+                        <button
+                          class="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium transition-[transform,background-color,color,box-shadow] duration-150 ease-snappy hover:bg-white hover:text-[#252a33] hover:shadow-sm active:scale-[.96]"
+                          type="button"
+                          aria-label="Next slide"
+                          @click="sendPreviewCommand('next')"
+                        >
+                          Next<ChevronRight :size="16" />
+                        </button>
+                      </div>
+                      <button
+                        class="inline-flex h-8 cursor-pointer items-center gap-2 rounded-lg px-2.5 text-[12px] font-medium transition-[transform,background-color,color] duration-150 ease-snappy hover:bg-[#f2f4f7] hover:text-[#252a33] active:scale-[.96]"
+                        type="button"
+                        :aria-label="
+                          isPreviewFullscreen
+                            ? 'Exit fullscreen'
+                            : 'Enter fullscreen'
+                        "
+                        @click="togglePreviewFullscreen"
+                      >
+                        <Minimize2
+                          v-if="isPreviewFullscreen"
+                          :size="16"
+                        /><Maximize2 v-else :size="16" /><span
+                          class="hidden sm:inline"
+                          >{{
+                            isPreviewFullscreen ? "Exit" : "Full screen"
+                          }}</span
+                        >
+                      </button>
+                    </div>
+                  </div>
+                  <div
+                    v-else
+                    class="flex size-full min-h-[400px] flex-col items-center justify-center rounded-2xl border border-[#dfe4eb] bg-white/85 text-center backdrop-blur-sm"
+                  >
+                    <div
+                      class="preview-illustration relative mb-7 h-[88px] w-[142px] rounded-xl border border-[#d9e0e9] bg-white shadow-[8px_9px_0_-3px_#eef2f7,8px_9px_0_-2px_#dfe5ed]"
+                    >
+                      <div></div>
+                      <span class="absolute right-4 bottom-4 text-accent"
+                        ><Play :size="25" fill="currentColor"
+                      /></span>
+                    </div>
+                    <h3 class="text-[16px] font-semibold text-[#303640]">
+                      {{
+                        isPreviewBusy
+                          ? "Preparing your presentation…"
+                          : "Ready when you are"
+                      }}
+                    </h3>
+                    <p
+                      class="mx-6 mt-2 mb-5 max-w-[390px] text-[13px] leading-relaxed text-[#818996]"
+                    >
+                      {{ friendlyPreviewMessage }}
+                    </p>
+                    <button
+                      v-if="preview.status.value === 'error'"
+                      class="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-accent px-4 text-[13px] font-semibold text-white shadow-[0_8px_20px_rgba(15,124,255,.24)] transition-transform duration-150 ease-snappy active:scale-[.97]"
+                      @click="startPreview"
+                    >
+                      <RefreshCw :size="16" />Try preview again
+                    </button>
+                    <div
+                      v-else-if="isPreviewBusy"
+                      class="mt-3 h-1 w-[170px] overflow-hidden rounded-full bg-[#e2e7ee]"
+                    >
+                      <span
+                        class="preview-progress block h-full w-[42%] rounded-full bg-accent motion-reduce:animate-pulse"
+                      ></span>
+                    </div>
+                  </div>
+                  <div
+                    v-if="showTerminal"
+                    class="absolute right-8 bottom-8 left-8 max-h-[45%] overflow-hidden rounded-2xl border border-[#283448] bg-[#071426]/95 text-white shadow-[0_20px_55px_rgba(7,20,38,.28)]"
+                  >
+                    <div
+                      class="flex h-10 items-center justify-between border-b border-white/10 px-3.5 text-[11px] text-white/60"
+                    >
+                      <span>Troubleshooting details</span
+                      ><button
+                        class="cursor-pointer transition-transform duration-150 active:scale-90"
+                        @click="showTerminal = false"
+                      >
+                        <X :size="15" />
+                      </button>
+                    </div>
+                    <pre
+                      class="m-0 max-h-[230px] overflow-auto p-4 font-mono text-[11px] leading-relaxed whitespace-pre-wrap text-white/70"
+                      >{{ preview.terminal.value.join("\n") }}</pre
+                    >
+                  </div>
+                </div>
+                <div
+                  class="flex h-9 items-center gap-2 border-t border-[#e9ecf0] px-4 text-[11px] text-[#89919d]"
+                  :class="{
+                    'text-[#368567]': preview.status.value === 'ready',
+                    'text-[#aa5862]': preview.status.value === 'error',
+                  }"
+                >
+                  <span
+                    class="size-1.5 rounded-full"
+                    :class="
+                      preview.status.value === 'ready'
+                        ? 'bg-[#4db78c]'
+                        : preview.status.value === 'error'
+                          ? 'bg-[#d77983]'
+                          : 'bg-[#a7aeb8]'
+                    "
+                  ></span
+                  >{{ friendlyPreviewMessage }}
+                </div>
+              </section>
+            </SplitterPanel>
+          </SplitterGroup>
         </div>
       </section>
     </main>
