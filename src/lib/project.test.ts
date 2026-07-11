@@ -13,8 +13,6 @@ const config: DeckConfig = {
   logoInvert: false,
   density: 'airy',
   tone: 'executive',
-  includeNotes: true,
-  preserveSourceReferences: true,
 }
 
 describe('Slidev project generation', () => {

@@ -25,8 +25,6 @@ import {
   SplitterGroup,
   SplitterPanel,
   SplitterResizeHandle,
-  SwitchRoot,
-  SwitchThumb,
   TabsContent,
   TabsList,
   TabsRoot,
@@ -94,8 +92,6 @@ const config = reactive<DeckConfig>({
   logoInvert: false,
   density: "balanced",
   tone: "executive",
-  includeNotes: true,
-  preserveSourceReferences: true,
 });
 const pdf = ref<ExtractedPdf>();
 const deck = ref<GeneratedDeck>();
@@ -130,15 +126,6 @@ const assets = computed<Record<string, Uint8Array>>(() => {
   const cover = pdf.value?.coverPng;
   if (cover) result["source-cover.png"] = cover;
   return result;
-});
-const coverDataUrl = computed(() => {
-  const bytes = pdf.value?.coverPng;
-  if (!bytes) return "";
-  let binary = "";
-  for (let offset = 0; offset < bytes.length; offset += 8192) {
-    binary += String.fromCharCode(...bytes.subarray(offset, offset + 8192));
-  }
-  return `data:image/png;base64,${btoa(binary)}`;
 });
 const projectFiles = computed(() =>
   createProjectFiles(markdown.value, config, assets.value),
@@ -196,6 +183,7 @@ async function loadPdf(file: File) {
   error.value = "";
   status.value = "extracting";
   progress.value = { current: 0, total: 0 };
+  pdf.value = undefined;
   deck.value = undefined;
   markdown.value = "";
   await preview.stop();
@@ -577,7 +565,7 @@ function resetPdf() {
       class="h-[calc(100vh-72px)] overflow-auto bg-canvas max-[720px]:h-auto max-[720px]:min-h-[calc(100vh-72px)]"
     >
       <section
-        v-if="!pdf"
+        v-if="!markdown"
         class="upload-gradient flex min-h-full flex-col items-center px-6 py-12 text-center text-white max-[720px]:px-4"
       >
         <div class="max-w-240">
@@ -589,265 +577,140 @@ function resetPdf() {
           <h1
             class="text-[clamp(42px,5.5vw,72px)] leading-[1.02] font-[450] tracking-[-0.045em] text-white"
           >
-            Your document has a story.<br /><span class="text-[#a9d8ff]"
-              >Bring it to life.</span
-            >
+            Your document has a story.<br /><span class="text-[#a9d8ff]">Bring it to life.</span>
           </h1>
-          <p
-            class="mx-auto mt-5 max-w-170 text-[17px] leading-[1.65] text-white/65"
-          >
-            Upload a report, proposal, or guide. Decksmith finds the narrative
-            and turns it into a presentation you can shape and share.
+          <p class="mx-auto mt-5 max-w-170 text-[17px] leading-[1.65] text-white/65">
+            Upload a report, proposal, or guide. Decksmith finds the narrative and turns it into a
+            presentation you can shape and share.
           </p>
         </div>
 
         <button
           ref="dropZone"
           type="button"
-          class="mt-9 flex min-h-53.75 w-full max-w-162.5 cursor-pointer flex-col items-center justify-center rounded-[26px] border border-white/70 bg-white p-8 text-[#151a24] shadow-[0_24px_70px_rgba(2,21,61,.28),0_2px_8px_rgba(2,21,61,.12)] transition-transform duration-150 ease-snappy hover:-translate-y-0.5 active:scale-[.99] motion-reduce:transform-none motion-reduce:transition-none"
-          :class="{ '-translate-y-1 ring-4 ring-white/25': isDraggingOver }"
+          class="mt-9 flex w-full max-w-162.5 cursor-pointer flex-col items-center justify-center rounded-[26px] border border-white/70 bg-white p-8 text-[#151a24] shadow-[0_24px_70px_rgba(2,21,61,.28),0_2px_8px_rgba(2,21,61,.12)] transition-transform duration-150 ease-snappy hover:-translate-y-0.5 active:scale-[.99] motion-reduce:transform-none motion-reduce:transition-none"
+          :class="[
+            pdf ? 'min-h-40' : 'min-h-53.75',
+            isDraggingOver ? '-translate-y-1 ring-4 ring-white/25' : '',
+          ]"
           @click="openFileDialog()"
         >
-          <span
-            class="mb-4 grid size-14 place-items-center rounded-2xl bg-[#eef6ff] text-accent"
-            ><CloudUpload :size="28" :stroke-width="1.8"
-          /></span>
-          <strong class="text-[17px] font-semibold tracking-[-0.01em]"
-            >Drop your PDF here</strong
-          >
-          <span class="mt-1.5 text-[14px] text-[#808897]"
-            >or choose a file from your computer</span
-          >
-          <span
-            class="mt-5 inline-flex h-10 items-center rounded-xl text-shadow-2xs ring-blue-700/70 inset-shadow-xs inset-shadow-blue-400 ring bg-linear-to-b bg-accent from-blue-500 via-accent to-blue-700/60 px-5 text-[13px] font-semibold text-white shadow-md shadow-blue-800/30"
-            >Choose a PDF</span
-          >
-          <small class="mt-3 text-[11px] text-[#a0a7b2]"
-            >Up to 25 MB · 80 pages</small
-          >
+          <template v-if="pdf">
+            <span class="mb-3 grid size-12 place-items-center rounded-2xl bg-[#eaf8f1] text-[#24845f]">
+              <Check :size="23" :stroke-width="2.2" />
+            </span>
+            <strong class="max-w-full truncate text-[16px] font-semibold tracking-[-0.01em]">
+              {{ pdf.fileName }}
+            </strong>
+            <span class="mt-1 text-[13px] text-[#7c8592]">{{ pdf.pageCount }} pages · Ready to create</span>
+            <small class="mt-3 text-[11px] font-medium text-accent">Choose a different PDF</small>
+          </template>
+          <template v-else>
+            <span class="mb-4 grid size-14 place-items-center rounded-2xl bg-[#eef6ff] text-accent">
+              <CloudUpload :size="28" :stroke-width="1.8" />
+            </span>
+            <strong class="text-[17px] font-semibold tracking-[-0.01em]">Drop your PDF here</strong>
+            <span class="mt-1.5 text-[14px] text-[#808897]">or choose a file from your computer</span>
+            <span
+              class="mt-5 inline-flex h-10 items-center rounded-xl text-shadow-2xs ring-blue-700/70 inset-shadow-xs inset-shadow-blue-400 ring bg-linear-to-b bg-accent from-blue-500 via-accent to-blue-700/60 px-5 text-[13px] font-semibold text-white shadow-md shadow-blue-800/30"
+              >Choose a PDF</span
+            >
+            <small class="mt-3 text-[11px] text-[#a0a7b2]">Up to 25 MB · 80 pages</small>
+          </template>
         </button>
 
         <div
           v-if="status === 'extracting'"
           class="mt-5 flex items-center gap-2 text-[13px] text-white/75"
         >
-          <LoaderCircle
-            class="animate-spin motion-reduce:animate-none"
-            :size="18"
-          />Reading page {{ progress.current }} of {{ progress.total || "…" }}
+          <LoaderCircle class="animate-spin motion-reduce:animate-none" :size="18" />Reading page
+          {{ progress.current }} of {{ progress.total || "…" }}
         </div>
+
+        <article
+          class="mt-6 w-full max-w-162.5 rounded-[22px] border border-white/70 bg-white p-5 text-left text-[#252a33] shadow-[0_18px_55px_rgba(2,21,61,.22)]"
+        >
+          <label class="grid gap-2 text-[12px] font-medium text-[#5d6572]">
+            Presentation title
+            <input
+              v-model="config.title"
+              class="h-11 w-full rounded-xl border border-[#dce1e8] bg-[#fbfcfd] px-3.5 text-[13px] font-normal text-[#262b34]"
+              placeholder="Untitled presentation"
+            />
+          </label>
+          <div class="mt-4 grid grid-cols-2 gap-4 max-[620px]:grid-cols-1">
+            <label class="grid gap-2 text-[12px] font-medium text-[#5d6572]">
+              Voice
+              <span class="relative">
+                <select
+                  v-model="config.tone"
+                  class="h-11 w-full appearance-none rounded-xl border border-[#dce1e8] bg-[#fbfcfd] px-3.5 pr-9 text-[13px] font-normal text-[#262b34]"
+                >
+                  <option value="executive">Professional</option>
+                  <option value="educational">Teaching</option>
+                  <option value="persuasive">Persuasive</option>
+                  <option value="conversational">Friendly</option>
+                </select>
+                <ChevronDown class="pointer-events-none absolute top-3.5 right-3 text-[#9aa2ae]" :size="15" />
+              </span>
+            </label>
+            <div>
+              <span class="text-[12px] font-medium text-[#5d6572]">Amount of detail</span>
+              <div class="mt-2 grid grid-cols-3 rounded-xl bg-[#f1f3f6] p-1">
+                <button
+                  v-for="option in [
+                    { value: 'airy', label: 'Simple' },
+                    { value: 'balanced', label: 'Balanced' },
+                    { value: 'dense', label: 'Detailed' },
+                  ]"
+                  :key="option.value"
+                  type="button"
+                  class="cursor-pointer rounded-lg px-2 py-2.5 text-[11px] font-medium text-[#7a8290] transition-[transform,background-color,color,box-shadow] duration-150 ease-snappy active:scale-[.97]"
+                  :class="{ 'bg-white text-[#252a33] shadow-sm': config.density === option.value }"
+                  @click="config.density = option.value as DeckConfig['density']"
+                >
+                  {{ option.label }}
+                </button>
+              </div>
+            </div>
+          </div>
+          <div
+            v-if="error"
+            class="mt-4 flex items-start gap-2.5 rounded-xl border border-[#f0c9ce] bg-[#fff6f7] px-3.5 py-3 text-[12px] leading-relaxed text-[#a94b57]"
+          >
+            <CircleAlert class="mt-0.5 shrink-0" :size="16" />{{ error }}
+          </div>
+          <button
+            class="mt-5 flex h-12 w-full cursor-pointer items-center justify-center gap-2.5 rounded-xl bg-accent px-5 text-[14px] font-semibold text-white shadow-[0_10px_24px_rgba(15,124,255,.24)] transition-transform duration-150 ease-snappy active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-45"
+            :disabled="!canGenerate"
+            @click="generateDeck"
+          >
+            <LoaderCircle
+              v-if="status === 'generating'"
+              class="animate-spin motion-reduce:animate-none"
+              :size="19"
+            />
+            <WandSparkles v-else :size="19" />
+            {{ status === "generating" ? "Creating your presentation…" : "Create my presentation" }}
+            <ArrowRight v-if="status !== 'generating'" class="ml-auto" :size="18" />
+          </button>
+        </article>
 
         <div
           class="mt-9 grid w-full max-w-225 grid-cols-3 border-t border-white/12 pt-7 text-left max-[720px]:grid-cols-1 max-[720px]:gap-4"
         >
           <div class="flex items-center justify-center gap-3">
-            <span
-              class="grid size-10 place-items-center rounded-xl bg-white/8 text-[#b9ddff]"
-              ><FileText :size="19" /></span
-            ><span
-              ><strong class="block text-[13px] font-medium text-white/85"
-                >Works with real documents</strong
-              ><small class="mt-1 block text-[11px] text-white/45"
-                >Reports, proposals, guides, and more</small
-              ></span
-            >
+            <span class="grid size-10 place-items-center rounded-xl bg-white/8 text-[#b9ddff]"><FileText :size="19" /></span>
+            <span><strong class="block text-[13px] font-medium text-white/85">Works with real documents</strong><small class="mt-1 block text-[11px] text-white/45">Reports, proposals, guides, and more</small></span>
           </div>
           <div class="flex items-center justify-center gap-3">
-            <span
-              class="grid size-10 place-items-center rounded-xl bg-white/8 text-[#b9ddff]"
-              ><WandSparkles :size="19" /></span
-            ><span
-              ><strong class="block text-[13px] font-medium text-white/85"
-                >Organized by ideas</strong
-              ><small class="mt-1 block text-[11px] text-white/45"
-                >Not one slide per page</small
-              ></span
-            >
+            <span class="grid size-10 place-items-center rounded-xl bg-white/8 text-[#b9ddff]"><WandSparkles :size="19" /></span>
+            <span><strong class="block text-[13px] font-medium text-white/85">Organized by ideas</strong><small class="mt-1 block text-[11px] text-white/45">Not one slide per page</small></span>
           </div>
           <div class="flex items-center justify-center gap-3">
-            <span
-              class="grid size-10 place-items-center rounded-xl bg-white/8 text-[#b9ddff]"
-              ><Layers3 :size="19" /></span
-            ><span
-              ><strong class="block text-[13px] font-medium text-white/85"
-                >Everything stays editable</strong
-              ><small class="mt-1 block text-[11px] text-white/45"
-                >Change the words, style, and structure</small
-              ></span
-            >
+            <span class="grid size-10 place-items-center rounded-xl bg-white/8 text-[#b9ddff]"><Layers3 :size="19" /></span>
+            <span><strong class="block text-[13px] font-medium text-white/85">Everything stays editable</strong><small class="mt-1 block text-[11px] text-white/45">Change the words, style, and structure</small></span>
           </div>
-        </div>
-      </section>
-
-      <section
-        v-else-if="!markdown"
-        class="min-h-full bg-[#f7f9fc] bg-[radial-gradient(#dce2ea_1px,transparent_1px)] bg-size-[16px_16px] px-5 py-9 max-[720px]:px-3 max-[720px]:py-5"
-      >
-        <div class="mx-auto max-w-230">
-          <div class="mb-7 flex flex-wrap items-end justify-between gap-5">
-            <div>
-              <span
-                class="text-[12px] font-semibold tracking-[0.12em] text-accent uppercase"
-                >Create your first draft</span
-              >
-              <h1
-                class="mt-2 text-[clamp(30px,4vw,48px)] leading-[1.08] font-normal tracking-[-0.045em] text-ink"
-              >
-                How should Decksmith tell the story?
-              </h1>
-              <p
-                class="mt-3 max-w-162.5 text-[15px] leading-relaxed text-[#747d8a]"
-              >
-                Choose the voice and level of detail now. You’ll design the
-                presentation alongside its live preview next.
-              </p>
-            </div>
-            <article
-              class="flex min-w-82.5 items-center gap-3 rounded-2xl border border-[#e0e5eb] bg-white p-3 pr-4 shadow-card max-[520px]:min-w-0 max-[520px]:w-full"
-            >
-              <div
-                class="grid h-15.5 w-12 shrink-0 place-items-center overflow-hidden rounded-lg border border-[#e4e8ee] bg-[#f0f3f7] text-[#87909e]"
-              >
-                <img
-                  v-if="coverDataUrl"
-                  class="size-full object-cover"
-                  :src="coverDataUrl"
-                  alt="PDF first page preview"
-                /><FileText v-else :size="22" />
-              </div>
-              <div class="min-w-0 flex-1">
-                <span
-                  class="inline-flex items-center gap-1 text-[10px] font-semibold text-[#24845f]"
-                  ><Check :size="12" />PDF ready</span
-                >
-                <h2 class="mt-1 truncate text-[13px] font-semibold">
-                  {{ pdf.fileName }}
-                </h2>
-                <p class="mt-0.5 text-[11px] text-[#89919e]">
-                  {{ pdf.pageCount }} pages
-                </p>
-              </div>
-              <button
-                class="grid size-9 shrink-0 cursor-pointer place-items-center rounded-xl border border-[#dfe3e9] text-[#727b88] transition-[transform,background-color] duration-150 ease-snappy hover:bg-[#f4f6f8] active:scale-[.94]"
-                type="button"
-                aria-label="Choose a different PDF"
-                @click="openFileDialog()"
-              >
-                <RefreshCw :size="15" />
-              </button>
-            </article>
-          </div>
-
-          <article
-            class="rounded-3xl border border-[#e0e5eb] bg-white p-6 shadow-card max-[620px]:p-5"
-          >
-            <label class="grid gap-2 text-[12px] font-medium text-[#5d6572]"
-              >Presentation title<input
-                v-model="config.title"
-                class="h-11 w-full rounded-xl border border-[#dce1e8] bg-[#fbfcfd] px-3.5 text-[13px] font-normal text-[#262b34]"
-                placeholder="Untitled presentation"
-            /></label>
-            <div class="mt-5 grid grid-cols-2 gap-5 max-[620px]:grid-cols-1">
-              <label class="grid gap-2 text-[12px] font-medium text-[#5d6572]"
-                >Voice<span class="relative"
-                  ><select
-                    v-model="config.tone"
-                    class="h-11 w-full appearance-none rounded-xl border border-[#dce1e8] bg-[#fbfcfd] px-3.5 pr-9 text-[13px] font-normal text-[#262b34]"
-                  >
-                    <option value="executive">Professional</option>
-                    <option value="educational">Teaching</option>
-                    <option value="persuasive">Persuasive</option>
-                    <option value="conversational">Friendly</option></select
-                  ><ChevronDown
-                    class="pointer-events-none absolute top-3.5 right-3 text-[#9aa2ae]"
-                    :size="15" /></span
-              ></label>
-              <div>
-                <span class="text-[12px] font-medium text-[#5d6572]"
-                  >Amount of detail</span
-                >
-                <div class="mt-2 grid grid-cols-3 rounded-xl bg-[#f1f3f6] p-1">
-                  <button
-                    v-for="option in [
-                      { value: 'airy', label: 'Simple' },
-                      { value: 'balanced', label: 'Balanced' },
-                      { value: 'dense', label: 'Detailed' },
-                    ]"
-                    :key="option.value"
-                    class="cursor-pointer rounded-lg px-2 py-2.5 text-[11px] font-medium text-[#7a8290] transition-[transform,background-color,color,box-shadow] duration-150 ease-snappy active:scale-[.97]"
-                    :class="{
-                      'bg-white text-[#252a33] shadow-sm':
-                        config.density === option.value,
-                    }"
-                    @click="
-                      config.density = option.value as DeckConfig['density']
-                    "
-                  >
-                    {{ option.label }}
-                  </button>
-                </div>
-              </div>
-            </div>
-            <div class="mt-5 grid grid-cols-2 gap-3 max-[620px]:grid-cols-1">
-              <div
-                class="flex items-center justify-between gap-4 rounded-xl border border-[#e6e9ee] px-4 py-3"
-              >
-                <span
-                  ><strong class="block text-[12px] font-medium text-[#343a44]"
-                    >Presenter notes</strong
-                  ><small class="mt-0.5 block text-[10px] text-[#929aa7]"
-                    >Helpful talking points</small
-                  ></span
-                ><SwitchRoot
-                  v-model="config.includeNotes"
-                  class="relative h-5.5 w-9.5 cursor-pointer rounded-full bg-[#ccd2db] p-0.75 transition-colors duration-150 data-[state=checked]:bg-accent"
-                  ><SwitchThumb
-                    class="block size-4 rounded-full bg-white shadow-sm transition-transform duration-150 data-[state=checked]:translate-x-4"
-                /></SwitchRoot>
-              </div>
-              <div
-                class="flex items-center justify-between gap-4 rounded-xl border border-[#e6e9ee] px-4 py-3"
-              >
-                <span
-                  ><strong class="block text-[12px] font-medium text-[#343a44]"
-                    >Page references</strong
-                  ><small class="mt-0.5 block text-[10px] text-[#929aa7]"
-                    >Show where ideas came from</small
-                  ></span
-                ><SwitchRoot
-                  v-model="config.preserveSourceReferences"
-                  class="relative h-5.5 w-9.5 cursor-pointer rounded-full bg-[#ccd2db] p-0.75 transition-colors duration-150 data-[state=checked]:bg-accent"
-                  ><SwitchThumb
-                    class="block size-4 rounded-full bg-white shadow-sm transition-transform duration-150 data-[state=checked]:translate-x-4"
-                /></SwitchRoot>
-              </div>
-            </div>
-            <div
-              v-if="error"
-              class="mt-5 flex items-start gap-2.5 rounded-xl border border-[#f0c9ce] bg-[#fff6f7] px-3.5 py-3 text-[12px] leading-relaxed text-[#a94b57]"
-            >
-              <CircleAlert class="mt-0.5 shrink-0" :size="16" />{{ error }}
-            </div>
-            <button
-              class="mt-6 flex h-12 w-full cursor-pointer items-center justify-center gap-2.5 rounded-xl bg-accent px-5 text-[14px] font-semibold text-white shadow-[0_10px_24px_rgba(15,124,255,.24)] transition-transform duration-150 ease-snappy active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-45"
-              :disabled="!canGenerate"
-              @click="generateDeck"
-            >
-              <LoaderCircle
-                v-if="status === 'generating'"
-                class="animate-spin motion-reduce:animate-none"
-                :size="19"
-              /><WandSparkles v-else :size="19" />{{
-                status === "generating"
-                  ? "Creating your presentation…"
-                  : "Create my presentation"
-              }}<ArrowRight
-                v-if="status !== 'generating'"
-                class="ml-auto"
-                :size="18"
-              />
-            </button>
-          </article>
         </div>
       </section>
 

@@ -33,7 +33,6 @@ const slideStyles = `
 .slidev-layout.l-cover h1:not(.fs-cover) { max-width: var(--mw-lead); margin: var(--sp-6) 0 var(--sp-3); color: var(--fg-dim); font-size: var(--fs-lead); line-height: 1.15; }
 .slidev-layout.l-topic .l-body { font-size: var(--fs-body); }
 .slidev-layout.l-topic .l-body h1 { max-width: var(--mw-title); margin: 0 0 var(--sp-6); font-size: var(--fs-h2); line-height: 1.06; }
-.source-ref { position: absolute; right: var(--pad-x, 2rem); bottom: 1.2rem; font-family: var(--font-mono); font-size: .56rem; color: var(--fg-dim); opacity: .72; }
 html.decksmith-embedded-preview #page-root nav { display: none !important; }
 `.trim()
 

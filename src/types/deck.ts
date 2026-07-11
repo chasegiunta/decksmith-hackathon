@@ -25,8 +25,6 @@ export interface DeckConfig {
   logoInvert: boolean
   density: Density
   tone: Tone
-  includeNotes: boolean
-  preserveSourceReferences: boolean
 }
 
 export interface SourcePage {
@@ -45,8 +43,6 @@ export interface ExtractedPdf {
 export interface GeneratedSlide {
   title: string
   body: string[]
-  speakerNotes?: string
-  sourcePages?: number[]
 }
 
 export interface GeneratedDeck {

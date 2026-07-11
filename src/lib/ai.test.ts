@@ -11,8 +11,6 @@ const config: DeckConfig = {
   logoInvert: false,
   density: 'balanced',
   tone: 'executive',
-  includeNotes: true,
-  preserveSourceReferences: true,
 }
 
 const pdf: ExtractedPdf = {

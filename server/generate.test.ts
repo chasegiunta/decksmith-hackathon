@@ -27,7 +27,7 @@ describe('generation function', () => {
       method: 'POST',
       body: {
         pdf: { fileName: 'source.pdf', pages: [{ pageNumber: 1, text: 'Useful source material.' }] },
-        config: { title: 'Demo', density: 'balanced', tone: 'executive', includeNotes: true, preserveSourceReferences: true },
+        config: { title: 'Demo', density: 'balanced', tone: 'executive' },
       },
     } as VercelRequest
 
@@ -37,6 +37,8 @@ describe('generation function', () => {
     const upstreamBody = JSON.parse(String(options.body)) as { tools?: Array<{ function?: { name?: string } }>; tool_choice?: { function?: { name?: string } } }
     expect(upstreamBody.tools?.[0]?.function?.name).toBe('submit_deck')
     expect(upstreamBody.tool_choice?.function?.name).toBe('submit_deck')
+    expect(String(options.body)).not.toContain('speakerNotes')
+    expect(String(options.body)).not.toContain('sourcePages')
     expect(response.status).toHaveBeenCalledWith(200)
     expect(json).toHaveBeenCalledWith({ output: '{"title":"Demo","slides":[{"title":"Opening","body":["A point"]}]}' })
   })

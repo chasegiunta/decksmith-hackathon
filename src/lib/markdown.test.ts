@@ -17,8 +17,6 @@ const config: DeckConfig = {
   logoInvert: false,
   density: 'balanced',
   tone: 'educational',
-  includeNotes: true,
-  preserveSourceReferences: true,
 }
 
 const deck: GeneratedDeck = {
@@ -27,23 +25,21 @@ const deck: GeneratedDeck = {
     {
       title: 'Opening',
       body: ['The setup', 'A literal divider\n---\nmust not split'],
-      speakerNotes: 'Say hello.',
-      sourcePages: [1],
     },
-    { title: 'Outcome', body: ['The result'], sourcePages: [2, 3] },
+    { title: 'Outcome', body: ['The result'] },
   ],
 }
 
 describe('Slidev markdown generation', () => {
-  it('generates headmatter, notes, references, and semantic slides', () => {
+  it('generates headmatter and semantic slides', () => {
     const markdown = generateMarkdown(deck, config)
     expect(markdown).toContain('theme: slidev-theme-tahta')
     expect(markdown).toContain('aspectRatio: 3/2')
     expect(markdown).toContain('  variant: editorial')
     expect(markdown).toContain('  accent: "#0f7cff"')
     expect(markdown).toContain('bg: grain')
-    expect(markdown).toContain('<!--\nSay hello.\n-->')
-    expect(markdown).toContain('Source p. 2, p. 3')
+    expect(markdown).not.toContain('speakerNotes')
+    expect(markdown).not.toContain('sourcePages')
     expect(parseOutline(markdown).map((item) => item.title)).toEqual(['Opening', 'Outcome'])
   })
 

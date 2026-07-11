@@ -8,10 +8,6 @@ function escapeSlideSeparators(value: string): string {
   return value.replace(/(^|\n)(\s*)---(?=\s*(?:\n|$))/g, '$1$2\\---')
 }
 
-function escapeCommentEnd(value: string): string {
-  return value.replaceAll('-->', '—>')
-}
-
 export function buildHeadmatter(config: DeckConfig): string {
   const lines = [
     '---',
@@ -37,26 +33,15 @@ export function buildHeadmatter(config: DeckConfig): string {
   return lines.join('\n')
 }
 
-function slideToMarkdown(slide: GeneratedSlide, config: DeckConfig): string {
+function slideToMarkdown(slide: GeneratedSlide): string {
   const lines = [`# ${escapeSlideSeparators(slide.title)}`, '']
   for (const point of slide.body) lines.push(`- ${escapeSlideSeparators(point)}`)
-
-  if (config.preserveSourceReferences && slide.sourcePages?.length) {
-    lines.push(
-      '',
-      `<div class="source-ref">Source ${slide.sourcePages.map((page) => `p. ${page}`).join(', ')}</div>`,
-    )
-  }
-
-  if (config.includeNotes && slide.speakerNotes) {
-    lines.push('', '<!--', escapeCommentEnd(slide.speakerNotes), '-->')
-  }
 
   return lines.join('\n').trim()
 }
 
 export function generateMarkdown(deck: GeneratedDeck, config: DeckConfig): string {
-  const slides = deck.slides.map((slide) => slideToMarkdown(slide, config))
+  const slides = deck.slides.map(slideToMarkdown)
   return `${buildHeadmatter({ ...config, title: config.title || deck.title })}\n\n${slides.join('\n\n---\n\n')}\n`
 }
 

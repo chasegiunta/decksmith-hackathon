@@ -4,8 +4,6 @@ import type { GeneratedDeck } from '@/types/deck'
 const slideSchema = z.object({
   title: z.string().trim().min(1).max(140),
   body: z.array(z.string().trim().min(1).max(800)).min(1).max(12),
-  speakerNotes: z.string().trim().max(4000).optional(),
-  sourcePages: z.array(z.number().int().positive()).max(30).optional(),
 })
 
 export const generatedDeckSchema = z.object({
@@ -74,7 +72,7 @@ function normalizeGeneratedDeck(value: unknown, fallbackTitle?: string): unknown
         const slide = entry as Record<string, unknown>
         const decodedBody = decodeJsonField(slide.body)
         const body = typeof decodedBody === 'string' && decodedBody.trim() ? [decodedBody] : decodedBody
-        return { ...slide, body, sourcePages: decodeJsonField(slide.sourcePages) }
+        return { ...slide, body }
       })
     : decodedSlides
   const fallback = fallbackTitle?.trim().slice(0, 160)
