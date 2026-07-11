@@ -34,8 +34,9 @@ import {
   AnimatePresence,
   LazyMotion,
   MotionConfig,
-  domAnimation,
+  domMax,
   m,
+  useDomRef,
   useReducedMotion,
 } from "motion-v";
 import {
@@ -115,6 +116,10 @@ const contentCrossfadeTransition = {
   duration: 0.18,
   ease: motionEase,
 };
+const uploaderLayoutTransition = {
+  layout: { type: "spring" as const, bounce: 0, visualDuration: 0.36 },
+  scale: { duration: 0.12, ease: motionEase },
+};
 function heroEntranceTransition(delay: number) {
   return {
     transform: {
@@ -149,7 +154,7 @@ const error = ref("");
 const progress = ref({ current: 0, total: 0 });
 const editorTab = ref("outline");
 const selectedSlideIndex = ref(0);
-const dropZone = ref<HTMLElement>();
+const dropZone = useDomRef();
 const isDraggingOver = ref(false);
 const showTerminal = ref(false);
 const hasManualEdits = ref(false);
@@ -451,7 +456,7 @@ function resetPdf() {
 
 <template>
   <MotionConfig reduced-motion="user">
-    <LazyMotion :features="domAnimation" strict>
+    <LazyMotion :features="domMax" strict>
       <div class="min-h-screen bg-canvas text-ink">
         <header class="h-18 border-b border-white/10 bg-navy text-white">
           <div
@@ -665,24 +670,32 @@ function resetPdf() {
                 </m.p>
               </div>
 
-              <button
+              <m.button
                 ref="dropZone"
                 type="button"
-                class="relative mt-9 flex min-h-64 w-full max-w-162.5 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-[26px] bg-linear-to-b from-white to-white/95 ring ring-white text-[#151a24] shadow-lg shadow-blue-950/50 transition-transform duration-150 ease-snappy hover:-translate-y-0.5 active:scale-[.99] motion-reduce:transform-none motion-reduce:transition-none"
-                :class="
-                  isDraggingOver ? '-translate-y-1 ring-4 ring-white/25' : ''
+                layout="size"
+                :layout-dependency="Boolean(pdf)"
+                :transition="uploaderLayoutTransition"
+                :while-press="
+                  prefersReducedMotion ? undefined : { scale: 0.99 }
                 "
+                class="relative mt-9 block w-full max-w-162.5 cursor-pointer overflow-hidden rounded-[26px] bg-linear-to-b from-white to-white/95 ring ring-white text-[#151a24] shadow-lg shadow-blue-950/50 transition-shadow duration-150 ease-snappy hover:shadow-xl motion-reduce:transition-none"
+                :class="isDraggingOver ? 'ring-4 ring-white/25' : ''"
                 @click="openFileDialog()"
               >
-                <AnimatePresence :initial="false">
+                <AnimatePresence mode="popLayout" :initial="false">
                   <m.div
                     v-if="pdf"
                     key="selected-pdf"
-                    class="absolute inset-0 flex w-full flex-col items-center justify-center p-8"
+                    layout
+                    class="flex w-full flex-col items-center justify-center p-8"
                     :initial="{ opacity: 0 }"
                     :animate="{ opacity: 1 }"
                     :exit="{ opacity: 0 }"
-                    :transition="contentCrossfadeTransition"
+                    :transition="{
+                      ...uploaderLayoutTransition,
+                      opacity: contentCrossfadeTransition,
+                    }"
                   >
                     <span
                       class="mb-3 grid size-12 place-items-center rounded-2xl bg-[#eaf8f1] text-[#24845f]"
@@ -705,11 +718,15 @@ function resetPdf() {
                   <m.div
                     v-else
                     key="empty-upload"
-                    class="absolute inset-0 flex w-full flex-col items-center justify-center p-8"
+                    layout
+                    class="flex w-full flex-col items-center justify-center p-8"
                     :initial="{ opacity: 0 }"
                     :animate="{ opacity: 1 }"
                     :exit="{ opacity: 0 }"
-                    :transition="contentCrossfadeTransition"
+                    :transition="{
+                      ...uploaderLayoutTransition,
+                      opacity: contentCrossfadeTransition,
+                    }"
                   >
                     <span
                       class="mb-4 grid size-14 shrink-0 place-items-center rounded-2xl bg-[#eef6ff] text-accent"
@@ -731,7 +748,7 @@ function resetPdf() {
                     >
                   </m.div>
                 </AnimatePresence>
-              </button>
+              </m.button>
 
               <div
                 v-if="status === 'extracting'"
@@ -959,9 +976,10 @@ function resetPdf() {
                           ><button
                             v-for="item in outline"
                             :key="item.index"
-                            class="grid min-h-[58px] w-full cursor-pointer grid-cols-[40px_1fr_auto] items-center gap-2 rounded-xl px-3 text-left transition-[transform,background-color] duration-150 ease-snappy hover:bg-[#f5f7f9] active:scale-[.99] motion-reduce:transition-none"
+                            class="grid min-h-14 w-full cursor-pointer grid-cols-[40px_1fr_auto] items-center gap-2 rounded-xl px-3 text-left transition-[transform,background-color] duration-150 ease-snappy hover:bg-[#f5f7f9] active:scale-[.99] motion-reduce:transition-none"
                             :class="{
-                              'bg-[#eef6ff]': selectedSlideIndex === item.index,
+                              'bg-slate-50 ring ring-gray-400/30 shadow':
+                                selectedSlideIndex === item.index,
                             }"
                             @click="openSlide(item.index)"
                           >
@@ -989,12 +1007,13 @@ function resetPdf() {
                               class="grid min-w-[145px] flex-1 gap-1.5 text-[11px] font-medium text-[#69717d]"
                               >Voice<UiSelect
                                 v-model="config.tone"
+                                class="w-full"
                                 :options="toneOptions"
                                 size="sm"
-                                surface="plain"
                             /></label>
                             <div class="ml-auto text-right">
                               <UiButton
+                                variant="secondary"
                                 :disabled="status === 'generating'"
                                 @click="rewriteDeck"
                               >

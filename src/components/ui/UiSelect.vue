@@ -25,7 +25,7 @@ const selectClasses = computed(() => [
   {
     "h-8 rounded-lg px-2 pr-7 text-[11px]": props.size === "xs",
     "h-10 rounded-lg px-3 pr-8 text-[12px]": props.size === "sm",
-    "h-10 rounded-lg px-3 pr-8 text-[12px]": props.size === "md",
+    "h-10 rounded-lg px-3.5 pr-9 text-[12px]": props.size === "md",
   },
 ]);
 const iconClasses = computed(() => [
@@ -33,7 +33,7 @@ const iconClasses = computed(() => [
   {
     "top-2 right-1.5": props.size === "xs",
     "top-3 right-2.5": props.size === "sm",
-    "top-3 right-2.5": props.size === "md",
+    "top-3 right-3": props.size === "md",
   },
 ]);
 const iconSize = computed(() => ({ xs: 12, sm: 14, md: 15 })[props.size]);
