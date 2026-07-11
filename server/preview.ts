@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { Sandbox } from '@vercel/sandbox'
+import JSZip from 'jszip'
 
 export const PREVIEW_PORT = 3030
 const MAX_FILES = 120
@@ -24,6 +25,21 @@ export interface PreviewFileInput {
 interface PreviewTokenPayload {
   sandbox: string
   expiresAt: number
+}
+
+export type PreviewExportFormat = 'pdf' | 'pptx' | 'png'
+
+export interface PreviewExportArtifact {
+  buffer: Buffer
+  contentType: string
+  extension: string
+}
+
+export function parsePreviewExportFormat(value: unknown): PreviewExportFormat {
+  if (value !== 'pdf' && value !== 'pptx' && value !== 'png') {
+    throw new Error('That export format is not supported.')
+  }
+  return value
 }
 
 function previewSecret(): string {
@@ -247,6 +263,75 @@ export async function updatePreview(sessionValue: unknown, filesValue: unknown) 
   const url = sandbox.domain(PREVIEW_PORT)
   await waitForPreview(url)
   return { url, expiresAt: session.expiresAt }
+}
+
+export async function exportPreview(sessionValue: unknown, formatValue: unknown): Promise<PreviewExportArtifact> {
+  const session = verifyPreviewToken(sessionValue)
+  const format = parsePreviewExportFormat(formatValue)
+  const sandbox = await Sandbox.get({ name: session.sandbox })
+  const exportRoot = `/tmp/decksmith-export-${Date.now()}`
+  const outputPath = format === 'png' ? `${exportRoot}/slides` : `${exportRoot}/presentation.${format}`
+
+  await sandbox.fs.mkdir(exportRoot, { recursive: true })
+  try {
+    const command = await sandbox.runCommand({
+      cmd: './node_modules/.bin/slidev',
+      args: [
+        'export',
+        'slides.md',
+        '--format',
+        format,
+        '--output',
+        outputPath,
+        '--timeout',
+        '90000',
+        '--wait-until',
+        'networkidle',
+        '--wait',
+        '250',
+      ],
+      cwd: sandbox.cwd,
+      timeoutMs: 120_000,
+    })
+    if (command.exitCode !== 0) {
+      const details = [await command.stderr(), await command.stdout()].filter(Boolean).join('\n').trim()
+      throw new Error(details || 'Slidev could not export this presentation.')
+    }
+
+    if (format === 'png') {
+      const names = (await sandbox.fs.readdir(outputPath))
+        .filter((name) => name.toLowerCase().endsWith('.png'))
+        .sort((left, right) => left.localeCompare(right, undefined, { numeric: true }))
+      if (!names.length) throw new Error('Slidev did not produce any slide images.')
+
+      const zip = new JSZip()
+      await Promise.all(names.map(async (name) => {
+        const image = await sandbox.readFileToBuffer({ path: `${outputPath}/${name}` })
+        if (!image) throw new Error(`Slidev could not read ${name}.`)
+        zip.file(name, image)
+      }))
+      return {
+        buffer: await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' }),
+        contentType: 'application/zip',
+        extension: 'png.zip',
+      }
+    }
+
+    const buffer = await sandbox.readFileToBuffer({ path: outputPath })
+    if (!buffer) throw new Error('Slidev did not produce an export file.')
+    return {
+      buffer,
+      contentType: format === 'pdf'
+        ? 'application/pdf'
+        : 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      extension: format,
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'The presentation could not be exported.'
+    throw new Error(`The ${format === 'pptx' ? 'PowerPoint' : format.toUpperCase()} export failed. ${message}`)
+  } finally {
+    await sandbox.runCommand('rm', ['-rf', exportRoot]).catch(() => undefined)
+  }
 }
 
 export async function stopPreview(sessionValue: unknown) {

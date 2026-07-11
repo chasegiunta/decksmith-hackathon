@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { createPreviewToken, decodePreviewFiles, extractModuleUrls, verifyPreviewToken } from './preview'
+import { createPreviewToken, decodePreviewFiles, extractModuleUrls, parsePreviewExportFormat, verifyPreviewToken } from './preview'
 
 beforeEach(() => {
   process.env.PREVIEW_SESSION_SECRET = 'test-secret-that-is-at-least-thirty-two-characters'
@@ -43,5 +43,12 @@ describe('preview request protection', () => {
       'https://sandbox.vercel.run/setup.ts',
       'https://sandbox.vercel.run/@slidev/client/main.ts',
     ])
+  })
+
+  it('only accepts export formats supported by Slidev', () => {
+    expect(parsePreviewExportFormat('pdf')).toBe('pdf')
+    expect(parsePreviewExportFormat('pptx')).toBe('pptx')
+    expect(parsePreviewExportFormat('png')).toBe('png')
+    expect(() => parsePreviewExportFormat('../../secret')).toThrow('not supported')
   })
 })

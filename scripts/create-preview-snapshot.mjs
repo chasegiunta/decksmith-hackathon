@@ -8,6 +8,7 @@ const packageJson = JSON.stringify({
   scripts: { dev: 'slidev --bind 0.0.0.0' },
   dependencies: {
     '@slidev/cli': '^52.17.0',
+    'playwright-chromium': '^1.61.1',
     'slidev-theme-tahta': '^0.13.2',
     echarts: '^6.1.0',
     vue: '^3.5.39',
@@ -32,6 +33,18 @@ try {
     { path: 'styles/index.css', content: '' },
     { path: 'vite.config.ts', content: "import { defineConfig } from 'vite'\nexport default defineConfig({ server: { host: '0.0.0.0', allowedHosts: true } })\n" },
   ])
+  const systemDependencies = await sandbox.runCommand({
+    cmd: 'dnf',
+    args: [
+      'install', '-y',
+      'alsa-lib', 'at-spi2-atk', 'atk', 'cups-libs', 'libdrm', 'libX11', 'libXcomposite',
+      'libXdamage', 'libXext', 'libXfixes', 'libXrandr', 'libxcb', 'libxkbcommon',
+      'mesa-libgbm', 'nspr', 'nss', 'pango',
+    ],
+    sudo: true,
+    timeoutMs: 5 * 60_000,
+  })
+  if (systemDependencies.exitCode !== 0) throw new Error(await systemDependencies.stderr())
   const install = await sandbox.runCommand({
     cmd: 'npm',
     args: ['install', '--no-audit', '--no-fund'],
@@ -73,6 +86,17 @@ try {
   if (warmup.exitCode !== 0) {
     const logs = await sandbox.runCommand({ cmd: 'sh', args: ['-lc', 'cat /tmp/slidev-warmup.log || true'], cwd: sandbox.cwd })
     throw new Error([await warmup.stderr(), await logs.stdout(), await logs.stderr()].filter(Boolean).join('\n'))
+  }
+
+  console.log('Verifying PDF export support…')
+  const exportCheck = await sandbox.runCommand({
+    cmd: './node_modules/.bin/slidev',
+    args: ['export', 'slides.md', '--format', 'pdf', '--output', '/tmp/decksmith-export-check.pdf', '--timeout', '90000', '--wait-until', 'networkidle', '--wait', '250'],
+    cwd: sandbox.cwd,
+    timeoutMs: 2 * 60_000,
+  })
+  if (exportCheck.exitCode !== 0) {
+    throw new Error([await exportCheck.stderr(), await exportCheck.stdout()].filter(Boolean).join('\n'))
   }
 
   const snapshot = await sandbox.snapshot({ expiration: 0 })

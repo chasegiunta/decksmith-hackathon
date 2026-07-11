@@ -14,6 +14,13 @@ import {
   useMediaQuery,
 } from "@vueuse/core";
 import {
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuPortal,
+  DropdownMenuRoot,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
   SplitterGroup,
   SplitterPanel,
   SplitterResizeHandle,
@@ -41,8 +48,10 @@ import {
   LoaderCircle,
   Maximize2,
   Minimize2,
+  Images,
   Palette,
   Play,
+  Presentation,
   RefreshCw,
   Sparkles,
   TerminalSquare,
@@ -60,6 +69,7 @@ import {
 } from "@/lib/markdown";
 import { createProjectFiles } from "@/lib/project";
 import { useVercelPreview } from "@/composables/useVercelPreview";
+import type { PreviewExportFormat } from "@/composables/useVercelPreview";
 import type { DeckConfig, ExtractedPdf, GeneratedDeck } from "@/types/deck";
 
 type WorkStatus =
@@ -98,6 +108,7 @@ const hasManualEdits = ref(false);
 const previewFrame = ref<HTMLIFrameElement>();
 const previewShell = ref<HTMLElement>();
 const isPreviewFullscreen = ref(false);
+const exporting = ref<PreviewExportFormat>();
 const isNarrowWorkspace = useMediaQuery("(max-width: 860px)");
 
 const preview = useVercelPreview();
@@ -366,6 +377,24 @@ async function downloadProject() {
   downloadBlob(zip, `${slugify(config.title)}-slidev.zip`);
 }
 
+async function exportPresentation(format: PreviewExportFormat) {
+  error.value = "";
+  exporting.value = format;
+  try {
+    await preview.update(projectFiles.value);
+    const artifact = await preview.exportArtifact(format);
+    const extension = format === "png" ? "slides-png.zip" : format;
+    downloadBlob(artifact, `${slugify(config.title)}.${extension}`);
+  } catch (cause) {
+    error.value =
+      cause instanceof Error
+        ? cause.message
+        : "The presentation could not be exported.";
+  } finally {
+    exporting.value = undefined;
+  }
+}
+
 function resetPdf() {
   void preview.stop();
   pdf.value = undefined;
@@ -417,20 +446,74 @@ function resetPdf() {
             >
               <X :size="14" /></button
           ></span>
-          <button
-            v-if="markdown"
-            class="hidden h-10 cursor-pointer items-center gap-2 rounded-xl border border-white/15 bg-white/[.06] px-4 text-[13px] font-medium text-white/80 transition-[transform,background-color] duration-150 ease-snappy hover:bg-white/10 active:scale-[.97] motion-reduce:transition-none sm:inline-flex"
-            @click="downloadMarkdown"
-          >
-            <FileDown :size="16" />Download slides
-          </button>
-          <button
-            v-if="markdown"
-            class="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-white px-4 text-[13px] font-semibold text-navy shadow-[0_6px_18px_rgba(0,0,0,.16)] transition-transform duration-150 ease-snappy active:scale-[.97] motion-reduce:transition-none"
-            @click="downloadProject"
-          >
-            <FileArchive :size="16" />Download presentation
-          </button>
+          <DropdownMenuRoot v-if="markdown">
+            <DropdownMenuTrigger as-child>
+              <button
+                class="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-white px-4 text-[13px] font-semibold text-navy shadow-[0_6px_18px_rgba(0,0,0,.16)] transition-transform duration-150 ease-snappy active:scale-[.97] disabled:cursor-wait disabled:opacity-75 motion-reduce:transition-none"
+                :disabled="Boolean(exporting)"
+              >
+                <LoaderCircle
+                  v-if="exporting"
+                  class="animate-spin motion-reduce:animate-none"
+                  :size="16"
+                />
+                <FileDown v-else :size="16" />
+                {{ exporting ? "Exporting…" : "Export" }}
+                <ChevronDown v-if="!exporting" :size="14" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuPortal>
+              <DropdownMenuContent
+                :side-offset="8"
+                align="end"
+                class="z-100 w-72 rounded-2xl border border-black/8 bg-white p-1.5 text-ink shadow-[0_18px_55px_rgba(5,16,37,.2),0_2px_8px_rgba(5,16,37,.08)] outline-none"
+              >
+                <DropdownMenuLabel class="px-3 pt-2 pb-1.5 text-[11px] font-semibold tracking-[.08em] text-[#8a91a0] uppercase">
+                  Share your presentation
+                </DropdownMenuLabel>
+                <DropdownMenuItem
+                  class="group flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 outline-none select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-40 data-[highlighted]:bg-[#eef6ff]"
+                  :disabled="preview.status.value !== 'ready'"
+                  @select="exportPresentation('pdf')"
+                >
+                  <span class="grid size-9 shrink-0 place-items-center rounded-xl bg-[#eaf3ff] text-accent"><FileDown :size="18" /></span>
+                  <span><strong class="block text-[13px] font-semibold">PDF document</strong><small class="mt-0.5 block text-[11px] text-[#777f8d]">Best for sharing and printing</small></span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  class="group flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 outline-none select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-40 data-[highlighted]:bg-[#eef6ff]"
+                  :disabled="preview.status.value !== 'ready'"
+                  @select="exportPresentation('pptx')"
+                >
+                  <span class="grid size-9 shrink-0 place-items-center rounded-xl bg-[#fff1e8] text-[#dc5a1f]"><Presentation :size="18" /></span>
+                  <span><strong class="block text-[13px] font-semibold">PowerPoint</strong><small class="mt-0.5 block text-[11px] text-[#777f8d]">Open in PowerPoint or Keynote</small></span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  class="group flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 outline-none select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-40 data-[highlighted]:bg-[#eef6ff]"
+                  :disabled="preview.status.value !== 'ready'"
+                  @select="exportPresentation('png')"
+                >
+                  <span class="grid size-9 shrink-0 place-items-center rounded-xl bg-[#edf8f3] text-[#21835f]"><Images :size="18" /></span>
+                  <span><strong class="block text-[13px] font-semibold">PNG images</strong><small class="mt-0.5 block text-[11px] text-[#777f8d]">One image per slide, in a ZIP</small></span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator class="mx-2 my-1 h-px bg-black/7" />
+                <DropdownMenuItem
+                  class="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 outline-none select-none data-[highlighted]:bg-[#f3f5f8]"
+                  @select="downloadMarkdown"
+                >
+                  <span class="grid size-9 shrink-0 place-items-center rounded-xl bg-[#f1f3f6] text-[#596171]"><FileText :size="18" /></span>
+                  <span><strong class="block text-[13px] font-semibold">Markdown</strong><small class="mt-0.5 block text-[11px] text-[#777f8d]">Just the presentation content</small></span>
+                </DropdownMenuItem>
+                <DropdownMenuLabel class="px-3 pt-2 pb-1 text-[10px] font-semibold tracking-[.08em] text-[#a0a6b1] uppercase">Advanced</DropdownMenuLabel>
+                <DropdownMenuItem
+                  class="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 outline-none select-none data-[highlighted]:bg-[#f3f5f8]"
+                  @select="downloadProject"
+                >
+                  <span class="grid size-9 shrink-0 place-items-center rounded-xl bg-[#f1f3f6] text-[#596171]"><FileArchive :size="18" /></span>
+                  <span><strong class="block text-[13px] font-semibold">Slidev project</strong><small class="mt-0.5 block text-[11px] text-[#777f8d]">Source files for developers</small></span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenuPortal>
+          </DropdownMenuRoot>
         </div>
       </div>
     </header>

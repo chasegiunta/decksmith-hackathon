@@ -52,6 +52,7 @@ export function createProjectFiles(
         scripts: { dev: 'slidev --bind 0.0.0.0', build: 'slidev build', export: 'slidev export' },
         dependencies: {
           '@slidev/cli': '^52.17.0',
+          'playwright-chromium': '^1.61.1',
           'slidev-theme-tahta': '^0.13.2',
           echarts: '^6.1.0',
           vue: '^3.5.39',
@@ -63,7 +64,7 @@ export function createProjectFiles(
     'vite.config.ts': `import { defineConfig } from 'vite'\n\nexport default defineConfig({\n  server: { host: '0.0.0.0', allowedHosts: true },\n})\n`,
     'global-top.vue': previewBridge,
     'styles/index.css': slideStyles,
-    'README.md': `# ${config.title || 'Slidev deck'}\n\nGenerated with Decksmith.\n\n## Run locally\n\n\`\`\`bash\nnpm install\nnpm run dev\n\`\`\`\n\nOpen the local URL printed by Slidev. Edit \`slides.md\` to change the deck.\n`,
+    'README.md': `# ${config.title || 'Slidev deck'}\n\nGenerated with Decksmith.\n\n## Run locally\n\n\`\`\`bash\nnpm install\nnpm run dev\n\`\`\`\n\nOpen the local URL printed by Slidev. Edit \`slides.md\` to change the deck.\n\n## Export\n\n\`\`\`bash\nnpm run export\n\`\`\`\n\nSlidev can export this presentation to PDF, PowerPoint, or PNG images.\n`,
   }
 
   for (const [name, content] of Object.entries(assets)) files[`public/assets/${name}`] = content

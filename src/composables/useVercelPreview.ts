@@ -2,6 +2,7 @@ import { readonly, ref } from 'vue'
 import type { ProjectFiles } from '@/types/deck'
 
 export type PreviewStatus = 'idle' | 'creating' | 'starting' | 'syncing' | 'ready' | 'error'
+export type PreviewExportFormat = 'pdf' | 'pptx' | 'png'
 
 interface PreviewResponse {
   url?: string
@@ -138,6 +139,21 @@ export function useVercelPreview() {
     await previewRequest('/api/preview/stop', { session: activeSession }, keepalive).catch(() => undefined)
   }
 
+  async function exportArtifact(format: PreviewExportFormat): Promise<Blob> {
+    if (!session) throw new Error('Open the presentation preview before exporting.')
+    await updateQueue.catch(() => undefined)
+    const response = await fetch('/api/preview/export', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ session, format }),
+    })
+    if (!response.ok) {
+      const result = await response.json().catch(() => ({})) as PreviewResponse
+      throw new Error(result.error || 'The presentation could not be exported.')
+    }
+    return response.blob()
+  }
+
   if (typeof window !== 'undefined') {
     window.addEventListener('pagehide', () => { void stop(true) })
   }
@@ -150,6 +166,7 @@ export function useVercelPreview() {
     start,
     prewarm,
     update,
+    exportArtifact,
     stop,
   }
 }

@@ -3,6 +3,7 @@ import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 import generateHandler from './api/generate'
+import previewExportHandler from './api/preview/export'
 import previewStartHandler from './api/preview/start'
 import previewStopHandler from './api/preview/stop'
 import previewUpdateHandler from './api/preview/update'
@@ -16,6 +17,7 @@ function localServerApi(environment: Record<string, string>): Plugin {
 
   const routes: Array<[string, ApiHandler]> = [
     ['/api/generate', generateHandler],
+    ['/api/preview/export', previewExportHandler],
     ['/api/preview/start', previewStartHandler],
     ['/api/preview/update', previewUpdateHandler],
     ['/api/preview/stop', previewStopHandler],
