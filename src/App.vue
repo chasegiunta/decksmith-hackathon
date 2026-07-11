@@ -67,6 +67,7 @@ import {
   updateMarkdownHeadmatter,
 } from "@/lib/markdown";
 import { createProjectFiles } from "@/lib/project";
+import { randomDeckAtmosphere, randomThemeVariant } from "@/lib/themes";
 import { useVercelPreview } from "@/composables/useVercelPreview";
 import type { PreviewExportFormat } from "@/composables/useVercelPreview";
 import type { DeckConfig, ExtractedPdf, GeneratedDeck } from "@/types/deck";
@@ -81,9 +82,9 @@ type WorkStatus =
 
 const config = reactive<DeckConfig>({
   title: "",
-  variant: "editorial",
+  variant: randomThemeVariant(),
   accent: "#0f7cff",
-  atmosphere: "grain",
+  atmosphere: randomDeckAtmosphere(),
   logo: "",
   logoInvert: false,
   density: "balanced",
@@ -400,6 +401,8 @@ function resetPdf() {
   status.value = "idle";
   error.value = "";
   config.title = "";
+  config.variant = randomThemeVariant();
+  config.atmosphere = randomDeckAtmosphere();
 }
 </script>
 

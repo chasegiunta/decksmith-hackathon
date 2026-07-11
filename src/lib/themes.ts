@@ -38,3 +38,18 @@ export const atmosphereOptions: Array<{ value: DeckAtmosphere; label: string; de
 ]
 
 export const accentPresets = ['#0f7cff', '#ff5a36', '#f5b700', '#2abf88', '#8b5cf6', '#ec4899']
+
+const defaultAtmospheres: DeckAtmosphere[] = ['aurora', 'grid', 'dots']
+
+function randomItem<T>(items: readonly T[], random: () => number): T {
+  const index = Math.min(items.length - 1, Math.max(0, Math.floor(random() * items.length)))
+  return items[index] as T
+}
+
+export function randomThemeVariant(random: () => number = Math.random): TahtaVariant {
+  return randomItem(themeOptions, random).value
+}
+
+export function randomDeckAtmosphere(random: () => number = Math.random): DeckAtmosphere {
+  return randomItem(defaultAtmospheres, random)
+}

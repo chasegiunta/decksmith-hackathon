@@ -38,6 +38,7 @@ describe('Slidev markdown generation', () => {
   it('generates headmatter, notes, references, and semantic slides', () => {
     const markdown = generateMarkdown(deck, config)
     expect(markdown).toContain('theme: slidev-theme-tahta')
+    expect(markdown).toContain('aspectRatio: 3/2')
     expect(markdown).toContain('  variant: editorial')
     expect(markdown).toContain('  accent: "#0f7cff"')
     expect(markdown).toContain('bg: grain')

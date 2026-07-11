@@ -32,6 +32,8 @@ describe('Slidev project generation', () => {
     expect(files['global-top.vue']).toContain("message.action === 'go'")
     expect(files['global-top.vue']).toContain("message.type === 'decksmith:fullscreen'")
     expect(files['styles/index.css']).toContain('html.decksmith-embedded-preview #page-root nav')
+    expect(files['styles/index.css']).toContain('.slidev-layout.l-topic .l-body h1')
+    expect(files['styles/index.css']).toContain('min(var(--fs-cover), 4.5rem)')
     expect(files['styles/index.css']).toContain("@fontsource/fraunces/latin-600.css")
     expect(files['package.json']).toContain('slidev-theme-tahta')
     expect(files['package.json']).toContain('@fontsource/hanken-grotesk')

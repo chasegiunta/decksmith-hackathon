@@ -16,6 +16,7 @@ export function buildHeadmatter(config: DeckConfig): string {
   const lines = [
     '---',
     'theme: slidev-theme-tahta',
+    'aspectRatio: 3/2',
     `title: ${yamlString(config.title || 'Untitled deck')}`,
     'themeConfig:',
     `  variant: ${config.variant}`,
