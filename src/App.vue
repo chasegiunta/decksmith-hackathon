@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
   computed,
+  defineAsyncComponent,
   onBeforeUnmount,
   onMounted,
   reactive,
@@ -79,6 +80,10 @@ type WorkStatus =
   | "generating"
   | "generated"
   | "error";
+
+const MarkdownEditor = defineAsyncComponent(
+  () => import("@/components/MarkdownEditor.vue"),
+);
 
 const config = reactive<DeckConfig>({
   title: "",
@@ -262,16 +267,16 @@ async function rewriteDeck() {
   await generateDeck();
 }
 
-function onMarkdownInput(event: Event) {
-  markdown.value = (event.target as HTMLTextAreaElement).value;
+function onMarkdownInput(value: string) {
+  markdown.value = value;
   hasManualEdits.value = true;
 }
 
-function onSlideMarkdownInput(event: Event) {
+function onSlideMarkdownInput(value: string) {
   markdown.value = replaceSlideSection(
     markdown.value,
     selectedSlideIndex.value,
-    (event.target as HTMLTextAreaElement).value,
+    value,
   );
   hasManualEdits.value = true;
 }
@@ -919,22 +924,20 @@ function resetPdf() {
                         selectedSlide?.title
                       }}</strong>
                     </div>
-                    <textarea
-                      class="min-h-0 w-full flex-1 resize-none border-0 bg-white px-6 py-5 font-mono text-[13px] leading-[1.8] text-[#434a55] caret-accent outline-0"
-                      :value="selectedSlide?.content || ''"
-                      spellcheck="false"
-                      :aria-label="`Markdown for slide ${selectedSlideIndex + 1}`"
-                      @input="onSlideMarkdownInput"
-                    ></textarea>
+                    <MarkdownEditor
+                      :key="selectedSlideIndex"
+                      class="min-h-0 flex-1"
+                      :model-value="selectedSlide?.content || ''"
+                      :label="`Markdown for slide ${selectedSlideIndex + 1}`"
+                      @update:model-value="onSlideMarkdownInput"
+                    />
                   </TabsContent>
                   <TabsContent value="markdown" class="min-h-0 flex-1">
-                    <textarea
-                      class="size-full resize-none border-0 bg-white px-6 py-5 font-mono text-[13px] leading-[1.8] text-[#434a55] caret-accent outline-0"
-                      :value="markdown"
-                      spellcheck="false"
-                      aria-label="Presentation content editor"
-                      @input="onMarkdownInput"
-                    ></textarea>
+                    <MarkdownEditor
+                      :model-value="markdown"
+                      label="Presentation content editor"
+                      @update:model-value="onMarkdownInput"
+                    />
                   </TabsContent>
                   <TabsContent
                     value="outline"

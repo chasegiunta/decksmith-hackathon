@@ -14,10 +14,15 @@
     "preview:snapshot": "node --env-file=.env.local scripts/create-preview-snapshot.mjs"
   },
   "dependencies": {
+    "@codemirror/commands": "^6.10.4",
+    "@codemirror/lang-markdown": "^6.5.0",
+    "@codemirror/language": "^6.12.4",
+    "@codemirror/view": "^6.43.6",
     "@lucide/vue": "^1.24.0",
     "@vercel/sandbox": "^2.5.0",
     "@vueuse/core": "^14.3.0",
     "jszip": "^3.10.1",
+    "motion-v": "^2.3.0",
     "pdfjs-dist": "^5.6.205",
     "reka-ui": "^2.10.1",
     "vue": "^3.5.39",
