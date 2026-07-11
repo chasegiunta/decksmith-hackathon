@@ -24,7 +24,7 @@ afterEach(() => vi.unstubAllGlobals())
 describe('hosted AI provider', () => {
   it('uses the same-origin generation function without browser credentials', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
-      output: '{"slides":[{"title":"Opening","body":["A clear point"]}]}',
+      output: '{"slides":[{"title":"Opening","body":["A clear point"],"build":"none"}]}',
     }), { status: 200, headers: { 'content-type': 'application/json' } }))
     vi.stubGlobal('fetch', fetchMock)
 

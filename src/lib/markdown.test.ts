@@ -25,8 +25,9 @@ const deck: GeneratedDeck = {
     {
       title: 'Opening',
       body: ['The setup', 'A literal divider\n---\nmust not split'],
+      build: 'none',
     },
-    { title: 'Outcome', body: ['The result'] },
+    { title: 'Outcome', body: ['The result'], build: 'none' },
   ],
 }
 
@@ -47,6 +48,21 @@ describe('Slidev markdown generation', () => {
     const markdown = generateMarkdown(deck, config)
     expect(markdown).toContain('A literal divider\n\\---\nmust not split')
     expect(parseOutline(markdown)).toHaveLength(2)
+  })
+
+  it('adds click builds only when the model identifies an opportunity', () => {
+    const markdown = generateMarkdown({
+      ...deck,
+      slides: [
+        { title: 'A process', body: ['Discover', 'Design', 'Deliver'], build: 'sequential' },
+        { title: 'Two at a time', body: ['Before', 'After', 'Risk', 'Reward'], build: 'pairs' },
+        { title: 'Static', body: ['One', 'Two'], build: 'none' },
+      ],
+    }, config)
+    expect(markdown).toContain('clickAnimation: fade')
+    expect(markdown).toContain('<v-clicks>\n\n- Discover')
+    expect(markdown).toContain('<v-clicks every="2">\n\n- Before')
+    expect(markdown).toContain('# Static\n\n- One\n- Two')
   })
 
   it('updates deck config without discarding edited slide content', () => {

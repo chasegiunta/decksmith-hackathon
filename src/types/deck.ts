@@ -15,6 +15,7 @@ export type TahtaVariant =
 export type DeckAtmosphere = 'none' | 'mesh' | 'aurora' | 'grain' | 'dots' | 'grid'
 export type Density = 'airy' | 'balanced' | 'dense'
 export type Tone = 'executive' | 'educational' | 'persuasive' | 'conversational'
+export type SlideBuild = 'none' | 'sequential' | 'pairs'
 
 export interface DeckConfig {
   title: string
@@ -43,6 +44,7 @@ export interface ExtractedPdf {
 export interface GeneratedSlide {
   title: string
   body: string[]
+  build: SlideBuild
 }
 
 export interface GeneratedDeck {

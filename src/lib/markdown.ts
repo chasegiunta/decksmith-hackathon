@@ -27,6 +27,7 @@ export function buildHeadmatter(config: DeckConfig): string {
     'drawings:',
     '  persist: false',
     'transition: slide-left',
+    'clickAnimation: fade',
     'mdc: true',
     '---',
   )
@@ -35,7 +36,10 @@ export function buildHeadmatter(config: DeckConfig): string {
 
 function slideToMarkdown(slide: GeneratedSlide): string {
   const lines = [`# ${escapeSlideSeparators(slide.title)}`, '']
+  const usesBuild = slide.build !== 'none' && slide.body.length > 1
+  if (usesBuild) lines.push(slide.build === 'pairs' ? '<v-clicks every="2">' : '<v-clicks>', '')
   for (const point of slide.body) lines.push(`- ${escapeSlideSeparators(point)}`)
+  if (usesBuild) lines.push('', '</v-clicks>')
 
   return lines.join('\n').trim()
 }

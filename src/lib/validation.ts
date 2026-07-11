@@ -4,6 +4,7 @@ import type { GeneratedDeck } from '@/types/deck'
 const slideSchema = z.object({
   title: z.string().trim().min(1).max(140),
   body: z.array(z.string().trim().min(1).max(800)).min(1).max(12),
+  build: z.enum(['none', 'sequential', 'pairs']).default('none'),
 })
 
 export const generatedDeckSchema = z.object({

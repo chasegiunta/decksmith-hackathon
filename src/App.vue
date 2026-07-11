@@ -202,6 +202,7 @@ async function loadPdf(file: File) {
             {
               title: "Preparing your presentation…",
               body: ["Finding the story in your document"],
+              build: "none",
             },
           ],
         },
