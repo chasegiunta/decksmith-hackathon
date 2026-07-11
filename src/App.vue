@@ -41,6 +41,7 @@ import {
   LoaderCircle,
   Maximize2,
   Minimize2,
+  Palette,
   Play,
   RefreshCw,
   Sparkles,
@@ -53,7 +54,8 @@ import ThemeStudio from "@/components/ThemeStudio.vue";
 import { createProjectZip, downloadBlob, slugify } from "@/lib/export";
 import {
   generateMarkdown,
-  parseOutline,
+  parseSlideSections,
+  replaceSlideSection,
   updateMarkdownHeadmatter,
 } from "@/lib/markdown";
 import { createProjectFiles } from "@/lib/project";
@@ -86,7 +88,9 @@ const markdown = ref("");
 const status = ref<WorkStatus>("idle");
 const error = ref("");
 const progress = ref({ current: 0, total: 0 });
-const editorTab = ref("markdown");
+const editorTab = ref("outline");
+const leftPanelView = ref("write");
+const selectedSlideIndex = ref(0);
 const dropZone = ref<HTMLElement>();
 const isDraggingOver = ref(false);
 const showTerminal = ref(false);
@@ -97,8 +101,14 @@ const isPreviewFullscreen = ref(false);
 const isNarrowWorkspace = useMediaQuery("(max-width: 860px)");
 
 const preview = useVercelPreview();
+const slideSections = computed(() =>
+  markdown.value ? parseSlideSections(markdown.value) : [],
+);
 const outline = computed(() =>
-  markdown.value ? parseOutline(markdown.value) : [],
+  slideSections.value.map(({ index, title }) => ({ index, title })),
+);
+const selectedSlide = computed(
+  () => slideSections.value[selectedSlideIndex.value],
 );
 const assets = computed<Record<string, Uint8Array>>(() => {
   const result: Record<string, Uint8Array> = {};
@@ -218,6 +228,9 @@ async function generateDeck() {
     if (!config.title.trim()) config.title = deck.value.title;
     markdown.value = generateMarkdown(deck.value, config);
     hasManualEdits.value = false;
+    selectedSlideIndex.value = 0;
+    editorTab.value = "outline";
+    leftPanelView.value = "write";
     status.value = "generated";
     void preview.start(projectFiles.value).catch(() => undefined);
   } catch (cause) {
@@ -245,6 +258,21 @@ function onMarkdownInput(event: Event) {
   hasManualEdits.value = true;
 }
 
+function onSlideMarkdownInput(event: Event) {
+  markdown.value = replaceSlideSection(
+    markdown.value,
+    selectedSlideIndex.value,
+    (event.target as HTMLTextAreaElement).value,
+  );
+  hasManualEdits.value = true;
+}
+
+function openSlide(index: number) {
+  selectedSlideIndex.value = index;
+  editorTab.value = "slide";
+  sendPreviewCommand("go", index + 1);
+}
+
 const syncPreview = useDebounceFn(async () => {
   if (preview.status.value === "ready" && markdown.value)
     await preview.update(projectFiles.value);
@@ -264,6 +292,14 @@ watch(markdown, () => {
   void syncPreview();
 });
 
+watch(
+  () => slideSections.value.length,
+  (length) => {
+    if (selectedSlideIndex.value >= length)
+      selectedSlideIndex.value = Math.max(0, length - 1);
+  },
+);
+
 async function startPreview() {
   error.value = "";
   try {
@@ -273,11 +309,14 @@ async function startPreview() {
   }
 }
 
-function sendPreviewCommand(action: "previous" | "next") {
+function sendPreviewCommand(
+  action: "previous" | "next" | "go",
+  slide?: number,
+) {
   const frameWindow = previewFrame.value?.contentWindow;
   if (!frameWindow || !preview.url.value) return;
   frameWindow.postMessage(
-    { type: "decksmith:navigate", action },
+    { type: "decksmith:navigate", action, slide },
     new URL(preview.url.value).origin,
   );
   previewFrame.value?.focus();
@@ -676,17 +715,9 @@ function resetPdf() {
 
       <section
         v-else
-        class="min-h-full bg-[#f7f9fc] bg-[radial-gradient(#dce2ea_1px,transparent_1px)] bg-size-[16px_16px] px-5 py-6 max-[720px]:px-3 max-[720px]:py-4"
+        class="h-full overflow-hidden bg-[#f7f9fc] bg-[radial-gradient(#dce2ea_1px,transparent_1px)] bg-size-[16px_16px] max-[860px]:h-auto max-[860px]:min-h-full max-[860px]:overflow-visible"
       >
-        <div class="mx-auto">
-          <ThemeStudio
-            v-model:variant="config.variant"
-            v-model:accent="config.accent"
-            v-model:atmosphere="config.atmosphere"
-            v-model:logo="config.logo"
-            v-model:logo-invert="config.logoInvert"
-            class="mb-5"
-          />
+        <div class="mx-auto h-full">
           <SplitterGroup
             :direction="isNarrowWorkspace ? 'vertical' : 'horizontal'"
             :auto-save-id="
@@ -694,118 +725,195 @@ function resetPdf() {
                 ? 'decksmith-workspace-vertical'
                 : 'decksmith-workspace-horizontal'
             "
-            class="h-[650px] min-h-[650px] w-full max-[860px]:h-[1200px] max-[860px]:min-h-0"
+            class="h-full min-h-0 w-full max-[860px]:h-75"
           >
             <SplitterPanel
               :default-size="42"
               :min-size="28"
-              class="min-w-0 pr-2.5 max-[860px]:pr-0 max-[860px]:pb-2.5"
+              class="min-w-0 pr-2 pl-6 pt-6 pb-6"
             >
               <section
-                class="flex h-full min-h-[560px] min-w-0 flex-col overflow-hidden rounded-[22px] border border-[#e1e5eb] bg-white shadow-card"
+                class="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[22px] border border-[#e1e5eb] bg-white shadow-lg"
               >
-                <TabsRoot v-model="editorTab" class="flex h-full flex-col">
+                <TabsRoot
+                  v-model="leftPanelView"
+                  class="flex h-full min-h-0 flex-col"
+                >
                   <div
-                    class="flex h-16 shrink-0 items-center justify-between border-b border-[#e9ecf0] px-5"
+                    class="flex h-14 shrink-0 items-center justify-between border-b border-[#e9ecf0] px-4"
                   >
-                    <div>
-                      <h2 class="text-[15px] font-semibold text-[#252a33]">
-                        Edit your presentation
-                      </h2>
-                      <p class="mt-0.5 text-[11px] text-[#929aa7]">
-                        Change the wording, structure, or formatting
-                      </p>
-                    </div>
-                    <TabsList class="flex h-9 gap-1 rounded-xl bg-[#f1f3f6] p-1"
-                      ><TabsTrigger
-                        class="flex cursor-pointer items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium text-[#78818d] data-[state=active]:bg-white data-[state=active]:text-[#252a33] data-[state=active]:shadow-sm"
-                        value="markdown"
-                        ><Code2 :size="15" />Content</TabsTrigger
-                      ><TabsTrigger
-                        class="flex cursor-pointer items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium text-[#78818d] data-[state=active]:bg-white data-[state=active]:text-[#252a33] data-[state=active]:shadow-sm"
-                        value="outline"
-                        ><Layers3 :size="15" />Outline
-                        <span class="text-[10px] text-[#9aa2ae]">{{
-                          outline.length
-                        }}</span></TabsTrigger
-                      ></TabsList
+                    <span class="text-[12px] font-semibold text-[#59616d]"
+                      >Workspace</span
                     >
+                    <TabsList
+                      class="flex h-9 gap-1 rounded-xl bg-[#f1f3f6] p-1"
+                    >
+                      <TabsTrigger
+                        value="write"
+                        class="flex cursor-pointer items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium text-[#78818d] data-[state=active]:bg-white data-[state=active]:text-[#252a33] data-[state=active]:shadow-sm"
+                        ><Code2 :size="14" />Write</TabsTrigger
+                      >
+                      <TabsTrigger
+                        value="design"
+                        class="flex cursor-pointer items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium text-[#78818d] data-[state=active]:bg-white data-[state=active]:text-[#252a33] data-[state=active]:shadow-sm"
+                        ><Palette :size="14" />Design</TabsTrigger
+                      >
+                    </TabsList>
                   </div>
-                  <TabsContent value="markdown" class="min-h-0 flex-1">
-                    <textarea
-                      class="size-full resize-none border-0 bg-white px-6 py-5 font-mono text-[13px] leading-[1.8] text-[#434a55] caret-accent outline-0"
-                      :value="markdown"
-                      spellcheck="false"
-                      aria-label="Presentation content editor"
-                      @input="onMarkdownInput"
-                    ></textarea>
-                  </TabsContent>
-                  <TabsContent
-                    value="outline"
-                    class="flex-1 overflow-y-auto p-4"
-                    ><button
-                      v-for="item in outline"
-                      :key="item.index"
-                      class="grid min-h-[58px] w-full cursor-pointer grid-cols-[40px_1fr_auto] items-center gap-2 rounded-xl px-3 text-left transition-[transform,background-color] duration-150 ease-snappy hover:bg-[#f5f7f9] active:scale-[.99] motion-reduce:transition-none"
+                  <TabsContent value="write" class="min-h-0 flex-1">
+                    <TabsRoot
+                      v-model="editorTab"
+                      class="flex h-full min-h-0 flex-col"
                     >
-                      <span class="text-[11px] text-[#9aa2ae]">{{
-                        String(item.index + 1).padStart(2, "0")
-                      }}</span
-                      ><strong class="text-[13px] font-medium text-[#444b56]">{{
-                        item.title
-                      }}</strong
-                      ><ArrowRight class="text-[#a1a8b3]" :size="15" /></button
-                  ></TabsContent>
-                  <footer
-                    class="shrink-0 border-t border-[#e9ecf0] bg-[#fbfcfd] p-3.5"
-                  >
-                    <div
-                      v-if="error"
-                      class="mb-3 flex items-start gap-2 rounded-xl border border-[#f0c9ce] bg-[#fff6f7] px-3 py-2.5 text-[11px] leading-relaxed text-[#a94b57]"
-                    >
-                      <CircleAlert class="mt-0.5 shrink-0" :size="14" />{{
-                        error
-                      }}
-                    </div>
-                    <div class="flex flex-wrap items-end justify-between gap-3">
-                      <label
-                        class="grid min-w-[145px] flex-1 gap-1.5 text-[11px] font-medium text-[#69717d]"
-                        >Voice<span class="relative"
-                          ><select
-                            v-model="config.tone"
-                            class="h-10 w-full appearance-none rounded-xl border border-[#dfe3e9] bg-white px-3 pr-8 text-[12px] font-normal text-[#252a33]"
-                          >
-                            <option value="executive">Professional</option>
-                            <option value="educational">Teaching</option>
-                            <option value="persuasive">Persuasive</option>
-                            <option value="conversational">
-                              Friendly
-                            </option></select
-                          ><ChevronDown
-                            class="pointer-events-none absolute top-3 right-2.5 text-[#9aa2ae]"
-                            :size="14" /></span
-                      ></label>
-                      <div class="ml-auto text-right">
-                        <small class="mb-1.5 block text-[10px] text-[#929aa7]"
-                          >Rewrites from the original PDF</small
+                      <div
+                        class="flex h-16 shrink-0 items-center justify-between border-b border-[#e9ecf0] px-5"
+                      >
+                        <div>
+                          <h2 class="text-[15px] font-semibold text-[#252a33]">
+                            Edit your presentation
+                          </h2>
+                          <p class="mt-0.5 text-[11px] text-[#929aa7]">
+                            Change the wording, structure, or formatting
+                          </p>
+                        </div>
+                        <TabsList
+                          class="flex h-9 gap-1 rounded-xl bg-[#f1f3f6] p-1"
+                          ><TabsTrigger
+                            class="flex cursor-pointer items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium text-[#78818d] data-[state=active]:bg-white data-[state=active]:text-[#252a33] data-[state=active]:shadow-sm"
+                            value="outline"
+                            ><Layers3 :size="15" />Outline
+                            <span class="text-[10px] text-[#9aa2ae]">{{
+                              outline.length
+                            }}</span></TabsTrigger
+                          ><TabsTrigger
+                            class="flex cursor-pointer items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium text-[#78818d] data-[state=active]:bg-white data-[state=active]:text-[#252a33] data-[state=active]:shadow-sm"
+                            value="slide"
+                            >Slide {{ selectedSlideIndex + 1 }}</TabsTrigger
+                          ><TabsTrigger
+                            class="flex cursor-pointer items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium text-[#78818d] data-[state=active]:bg-white data-[state=active]:text-[#252a33] data-[state=active]:shadow-sm"
+                            value="markdown"
+                            ><Code2 :size="15" />Full deck</TabsTrigger
+                          ></TabsList
                         >
-                        <button
-                          class="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-accent px-4 text-[12px] font-semibold text-white shadow-[0_7px_18px_rgba(15,124,255,.22)] transition-transform duration-150 ease-snappy active:scale-[.97] disabled:cursor-not-allowed disabled:opacity-50"
-                          type="button"
-                          :disabled="status === 'generating'"
-                          @click="rewriteDeck"
-                        >
-                          <LoaderCircle
-                            v-if="status === 'generating'"
-                            class="animate-spin motion-reduce:animate-none"
-                            :size="15"
-                          /><WandSparkles v-else :size="15" />{{
-                            status === "generating" ? "Rewriting…" : "Rewrite"
-                          }}
-                        </button>
                       </div>
-                    </div>
-                  </footer>
+                      <TabsContent
+                        value="slide"
+                        class="flex min-h-0 flex-1 flex-col"
+                      >
+                        <div
+                          class="flex h-11 shrink-0 items-center justify-between border-b border-[#eef0f3] px-5 text-[11px] text-[#858e9b]"
+                        >
+                          <span>Slide {{ selectedSlideIndex + 1 }}</span>
+                          <strong class="truncate font-medium text-[#515966]">{{
+                            selectedSlide?.title
+                          }}</strong>
+                        </div>
+                        <textarea
+                          class="min-h-0 w-full flex-1 resize-none border-0 bg-white px-6 py-5 font-mono text-[13px] leading-[1.8] text-[#434a55] caret-accent outline-0"
+                          :value="selectedSlide?.content || ''"
+                          spellcheck="false"
+                          :aria-label="`Markdown for slide ${selectedSlideIndex + 1}`"
+                          @input="onSlideMarkdownInput"
+                        ></textarea>
+                      </TabsContent>
+                      <TabsContent value="markdown" class="min-h-0 flex-1">
+                        <textarea
+                          class="size-full resize-none border-0 bg-white px-6 py-5 font-mono text-[13px] leading-[1.8] text-[#434a55] caret-accent outline-0"
+                          :value="markdown"
+                          spellcheck="false"
+                          aria-label="Presentation content editor"
+                          @input="onMarkdownInput"
+                        ></textarea>
+                      </TabsContent>
+                      <TabsContent
+                        value="outline"
+                        class="min-h-0 flex-1 overflow-y-auto p-4"
+                        ><button
+                          v-for="item in outline"
+                          :key="item.index"
+                          class="grid min-h-[58px] w-full cursor-pointer grid-cols-[40px_1fr_auto] items-center gap-2 rounded-xl px-3 text-left transition-[transform,background-color] duration-150 ease-snappy hover:bg-[#f5f7f9] active:scale-[.99] motion-reduce:transition-none"
+                          :class="{
+                            'bg-[#eef6ff]': selectedSlideIndex === item.index,
+                          }"
+                          @click="openSlide(item.index)"
+                        >
+                          <span class="text-[11px] text-[#9aa2ae]">{{
+                            String(item.index + 1).padStart(2, "0")
+                          }}</span
+                          ><strong
+                            class="text-[13px] font-medium text-[#444b56]"
+                            >{{ item.title }}</strong
+                          ><ArrowRight
+                            class="text-[#a1a8b3]"
+                            :size="15"
+                          /></button
+                      ></TabsContent>
+                      <footer
+                        class="shrink-0 border-t border-[#e9ecf0] bg-[#fbfcfd] p-3.5"
+                      >
+                        <div
+                          v-if="error"
+                          class="mb-3 flex items-start gap-2 rounded-xl border border-[#f0c9ce] bg-[#fff6f7] px-3 py-2.5 text-[11px] leading-relaxed text-[#a94b57]"
+                        >
+                          <CircleAlert class="mt-0.5 shrink-0" :size="14" />{{
+                            error
+                          }}
+                        </div>
+                        <div
+                          class="flex flex-wrap items-end justify-between gap-3"
+                        >
+                          <label
+                            class="grid min-w-[145px] flex-1 gap-1.5 text-[11px] font-medium text-[#69717d]"
+                            >Voice<span class="relative"
+                              ><select
+                                v-model="config.tone"
+                                class="h-10 w-full appearance-none rounded-xl border border-[#dfe3e9] bg-white px-3 pr-8 text-[12px] font-normal text-[#252a33]"
+                              >
+                                <option value="executive">Professional</option>
+                                <option value="educational">Teaching</option>
+                                <option value="persuasive">Persuasive</option>
+                                <option value="conversational">
+                                  Friendly
+                                </option></select
+                              ><ChevronDown
+                                class="pointer-events-none absolute top-3 right-2.5 text-[#9aa2ae]"
+                                :size="14" /></span
+                          ></label>
+                          <div class="ml-auto text-right">
+                            <small
+                              class="mb-1.5 block text-[10px] text-[#929aa7]"
+                              >Rewrites from the original PDF</small
+                            >
+                            <button
+                              class="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-accent px-4 text-[12px] font-semibold text-white shadow-[0_7px_18px_rgba(15,124,255,.22)] transition-transform duration-150 ease-snappy active:scale-[.97] disabled:cursor-not-allowed disabled:opacity-50"
+                              type="button"
+                              :disabled="status === 'generating'"
+                              @click="rewriteDeck"
+                            >
+                              <LoaderCircle
+                                v-if="status === 'generating'"
+                                class="animate-spin motion-reduce:animate-none"
+                                :size="15"
+                              /><WandSparkles v-else :size="15" />{{
+                                status === "generating"
+                                  ? "Rewriting…"
+                                  : "Rewrite"
+                              }}
+                            </button>
+                          </div>
+                        </div>
+                      </footer>
+                    </TabsRoot>
+                  </TabsContent>
+                  <TabsContent value="design" class="min-h-0 flex-1">
+                    <ThemeStudio
+                      v-model:variant="config.variant"
+                      v-model:accent="config.accent"
+                      v-model:atmosphere="config.atmosphere"
+                      v-model:logo="config.logo"
+                      v-model:logo-invert="config.logoInvert"
+                    />
+                  </TabsContent>
                 </TabsRoot>
               </section>
             </SplitterPanel>
@@ -823,10 +931,10 @@ function resetPdf() {
             <SplitterPanel
               :default-size="58"
               :min-size="38"
-              class="min-w-0 pl-2.5 max-[860px]:pt-2.5 max-[860px]:pl-0"
+              class="min-w-0 pl-2 pt-6 pb-6 pr-6"
             >
               <section
-                class="flex h-full min-h-[560px] min-w-0 flex-col overflow-hidden rounded-[22px] border border-[#d9dee6] bg-white shadow-[0_18px_55px_rgba(24,39,75,.12)]"
+                class="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[22px] border border-[#d9dee6] bg-white shadow-lg"
               >
                 <div
                   class="flex h-16 shrink-0 items-center justify-between border-b border-[#e9ecf0] px-5"
@@ -862,12 +970,12 @@ function resetPdf() {
                   </div>
                 </div>
                 <div
-                  class="preview-grid relative min-h-0 flex-1 overflow-hidden p-[clamp(18px,2.5vw,34px)]"
+                  class="preview-grid relative min-h-0 flex-1 overflow-hidden"
                 >
                   <div
                     v-if="preview.url.value"
                     ref="previewShell"
-                    class="flex size-full min-h-0 flex-col overflow-hidden rounded-2xl border border-[#d9dee6] bg-white shadow-[0_14px_38px_rgba(29,46,79,.16)]"
+                    class="flex size-full min-h-0 flex-col overflow-hidden"
                   >
                     <iframe
                       ref="previewFrame"

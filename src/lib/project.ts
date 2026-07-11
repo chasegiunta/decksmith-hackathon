@@ -13,10 +13,11 @@ const nav = useNav()
 
 function onDecksmithMessage(event: MessageEvent) {
   if (event.source !== window.parent || !event.data || typeof event.data !== 'object') return
-  const message = event.data as { type?: string; action?: string; fullscreen?: boolean }
+  const message = event.data as { type?: string; action?: string; slide?: number; fullscreen?: boolean }
   if (message.type === 'decksmith:navigate') {
     if (message.action === 'previous') void nav.prev()
     if (message.action === 'next') void nav.next()
+    if (message.action === 'go' && Number.isInteger(message.slide)) void nav.go(message.slide as number)
   }
   if (message.type === 'decksmith:fullscreen' && typeof message.fullscreen === 'boolean') {
     document.documentElement.classList.toggle('decksmith-embedded-preview', !message.fullscreen)
@@ -43,18 +44,22 @@ export function createProjectFiles(
 ): ProjectFiles {
   const files: ProjectFiles = {
     'slides.md': markdown,
-    'package.json': JSON.stringify({
-      name: 'generated-slidev-deck',
-      private: true,
-      type: 'module',
-      scripts: { dev: 'slidev --bind 0.0.0.0', build: 'slidev build', export: 'slidev export' },
-      dependencies: {
-        '@slidev/cli': '^52.17.0',
-        'slidev-theme-tahta': '^0.13.2',
-        echarts: '^6.1.0',
-        vue: '^3.5.39',
+    'package.json': JSON.stringify(
+      {
+        name: 'generated-slidev-deck',
+        private: true,
+        type: 'module',
+        scripts: { dev: 'slidev --bind 0.0.0.0', build: 'slidev build', export: 'slidev export' },
+        dependencies: {
+          '@slidev/cli': '^52.17.0',
+          'slidev-theme-tahta': '^0.13.2',
+          echarts: '^6.1.0',
+          vue: '^3.5.39',
+        },
       },
-    }, null, 2),
+      null,
+      2,
+    ),
     'vite.config.ts': `import { defineConfig } from 'vite'\n\nexport default defineConfig({\n  server: { host: '0.0.0.0', allowedHosts: true },\n})\n`,
     'global-top.vue': previewBridge,
     'styles/index.css': slideStyles,

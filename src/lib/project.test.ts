@@ -29,6 +29,7 @@ describe('Slidev project generation', () => {
     expect(files).toHaveProperty('public/assets/cover.png')
     expect(files['vite.config.ts']).toContain('allowedHosts: true')
     expect(files['global-top.vue']).toContain("message.type === 'decksmith:navigate'")
+    expect(files['global-top.vue']).toContain("message.action === 'go'")
     expect(files['global-top.vue']).toContain("message.type === 'decksmith:fullscreen'")
     expect(files['styles/index.css']).toContain('html.decksmith-embedded-preview #page-root nav')
     expect(files['package.json']).toContain('slidev-theme-tahta')
@@ -39,7 +40,16 @@ describe('Slidev project generation', () => {
     const files = createProjectFiles('# Hello', config)
     const blob = await createProjectZip(files)
     const zip = await JSZip.loadAsync(await blob.arrayBuffer())
-    expect(Object.keys(zip.files)).toEqual(expect.arrayContaining(['slides.md', 'package.json', 'vite.config.ts', 'global-top.vue', 'styles/index.css', 'README.md']))
+    expect(Object.keys(zip.files)).toEqual(
+      expect.arrayContaining([
+        'slides.md',
+        'package.json',
+        'vite.config.ts',
+        'global-top.vue',
+        'styles/index.css',
+        'README.md',
+      ]),
+    )
     expect(await zip.file('slides.md')?.async('string')).toBe('# Hello')
   })
 })

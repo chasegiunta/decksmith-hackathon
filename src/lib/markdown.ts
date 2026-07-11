@@ -41,7 +41,10 @@ function slideToMarkdown(slide: GeneratedSlide, config: DeckConfig): string {
   for (const point of slide.body) lines.push(`- ${escapeSlideSeparators(point)}`)
 
   if (config.preserveSourceReferences && slide.sourcePages?.length) {
-    lines.push('', `<div class="source-ref">Source ${slide.sourcePages.map((page) => `p. ${page}`).join(', ')}</div>`)
+    lines.push(
+      '',
+      `<div class="source-ref">Source ${slide.sourcePages.map((page) => `p. ${page}`).join(', ')}</div>`,
+    )
   }
 
   if (config.includeNotes && slide.speakerNotes) {
@@ -68,13 +71,45 @@ export interface OutlineItem {
   title: string
 }
 
+export interface SlideSection extends OutlineItem {
+  content: string
+}
+
+interface MarkdownDocument {
+  headmatter: string
+  slides: string[]
+}
+
+function splitMarkdownDocument(markdown: string): MarkdownDocument {
+  const match = markdown.match(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/)
+  const headmatter = match?.[0].trimEnd() ?? ''
+  const body = markdown.slice(match?.[0].length ?? 0).replace(/^\r?\n?/, '')
+  return {
+    headmatter,
+    slides: body
+      .split(/\n\s*---\s*\n/g)
+      .map((slide) => slide.trim())
+      .filter(Boolean),
+  }
+}
+
+export function parseSlideSections(markdown: string): SlideSection[] {
+  return splitMarkdownDocument(markdown).slides.map((content, index) => {
+    const heading = content.match(/^#\s+(.+)$/m)?.[1]?.trim()
+    return { index, title: heading || `Slide ${index + 1}`, content }
+  })
+}
+
+export function replaceSlideSection(markdown: string, index: number, content: string): string {
+  const document = splitMarkdownDocument(markdown)
+  if (!document.slides[index]) return markdown
+  document.slides[index] = content.trim()
+  const prefix = document.headmatter ? `${document.headmatter}\n\n` : ''
+  return `${prefix}${document.slides.join('\n\n---\n\n')}\n`
+}
+
 export function parseOutline(markdown: string): OutlineItem[] {
-  const withoutHeadmatter = markdown.replace(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/, '')
-  const chunks = withoutHeadmatter.split(/\n\s*---\s*\n/g)
-  return chunks.map((chunk, index) => {
-    const heading = chunk.match(/^#\s+(.+)$/m)?.[1]?.trim()
-    return { index, title: heading || `Slide ${index + 1}` }
-  }).filter((item, index) => item.title !== `Slide ${index + 1}` || chunks[index]?.trim())
+  return parseSlideSections(markdown).map(({ index, title }) => ({ index, title }))
 }
 
 export const markdownInternals = { escapeSlideSeparators }

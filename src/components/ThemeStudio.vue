@@ -14,9 +14,7 @@ const logoInvert = defineModel<boolean>('logoInvert', { required: true })
 </script>
 
 <template>
-  <aside
-    class="min-w-0 overflow-hidden rounded-[22px] border border-[#e1e5eb] bg-white shadow-card"
-  >
+  <aside class="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-white">
     <div class="flex h-16 shrink-0 items-center gap-3 border-b border-[#e9ecf0] px-4">
       <span class="grid size-9 place-items-center rounded-xl bg-[#eef6ff] text-accent"
         ><Palette :size="17"
@@ -29,14 +27,12 @@ const logoInvert = defineModel<boolean>('logoInvert', { required: true })
       >
     </div>
 
-    <div class="grid grid-cols-[minmax(0,1fr)_300px] gap-5 p-4 max-[1100px]:grid-cols-1">
+    <div class="min-h-0 flex-1 overflow-y-auto p-4">
       <section class="min-w-0">
         <span class="text-[11px] font-semibold tracking-[0.08em] text-[#7b8491] uppercase"
           >Visual style</span
         >
-        <div
-          class="mt-3 grid grid-cols-7 gap-2.5 max-[1400px]:grid-cols-5 max-[1100px]:grid-cols-4 max-[760px]:grid-cols-2"
-        >
+        <div class="mt-3 grid grid-cols-2 gap-2.5">
           <button
             v-for="option in themeOptions"
             :key="option.value"
@@ -73,9 +69,7 @@ const logoInvert = defineModel<boolean>('logoInvert', { required: true })
         </div>
       </section>
 
-      <section
-        class="grid content-start gap-5 border-l border-[#edf0f4] pl-5 max-[1100px]:grid-cols-3 max-[1100px]:border-t max-[1100px]:border-l-0 max-[1100px]:pt-5 max-[1100px]:pl-0 max-[760px]:grid-cols-1"
-      >
+      <section class="mt-6 grid content-start gap-5 border-t border-[#edf0f4] pt-5">
         <div>
           <span class="text-[11px] font-semibold tracking-[0.08em] text-[#7b8491] uppercase"
             >Brand color</span
@@ -122,7 +116,7 @@ const logoInvert = defineModel<boolean>('logoInvert', { required: true })
               :size="14" /></span
         ></label>
 
-        <details class="border-t border-[#edf0f4] pt-4 max-[1100px]:border-t-0 max-[1100px]:pt-0">
+        <details class="border-t border-[#edf0f4] pt-4">
           <summary class="cursor-pointer text-[12px] font-medium text-[#5d6572]">
             Optional brand logo
           </summary>
